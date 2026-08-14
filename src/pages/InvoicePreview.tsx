@@ -325,7 +325,7 @@ export default function InvoicePreview() {
       {/* Invoice Document Wrapper */}
       <div 
         ref={containerRef}
-        className="w-full overflow-hidden bg-gray-50/50 p-0 sm:p-6 print:p-0 print:bg-transparent rounded-xl print:overflow-visible print:block"
+        className="w-full overflow-hidden bg-white/40 backdrop-blur-sm p-0 sm:p-6 print:p-0 print:bg-transparent rounded-2xl print:overflow-visible print:block border border-white/60 shadow-sm"
       >
         <div 
           style={{ 

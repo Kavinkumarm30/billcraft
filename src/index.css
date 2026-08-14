@@ -122,10 +122,11 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-r from-[#9b9b9b] to-[#f5f5f5] text-foreground min-h-screen antialiased;
+    background-attachment: fixed;
     }
   html {
-    @apply font-sans;
+    @apply font-sans min-h-screen;
     }
 }
 @media print {

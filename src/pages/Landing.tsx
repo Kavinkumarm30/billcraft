@@ -1,6 +1,6 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowRight, FileText, Camera, Zap } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Logo } from '../components/Logo';
 import { motion } from 'motion/react';
@@ -74,38 +74,6 @@ export default function Landing() {
           </Link>
         </motion.div>
         
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-12 mt-32 text-left max-w-6xl mx-auto pt-16 relative"
-        >
-          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-black/20 to-transparent"></div>
-          
-          <div className="space-y-4 group">
-            <div className="h-14 w-14 bg-black rounded-2xl flex items-center justify-center transform group-hover:rotate-12 transition-all duration-300 shadow-xl">
-              <Camera className="h-7 w-7 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-black">Studio First</h3>
-            <p className="text-gray-700 font-medium">Designed specifically for photography and film studios to manage their unique billing needs seamlessly.</p>
-          </div>
-          
-          <div className="space-y-4 group">
-            <div className="h-14 w-14 bg-black rounded-2xl flex items-center justify-center transform group-hover:-rotate-12 transition-all duration-300 shadow-xl">
-              <Zap className="h-7 w-7 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-black">AI Powered</h3>
-            <p className="text-gray-700 font-medium">Instantly extract invoice details from images and handwritten bills with advanced AI technology.</p>
-          </div>
-          
-          <div className="space-y-4 group">
-            <div className="h-14 w-14 bg-black rounded-2xl flex items-center justify-center transform group-hover:rotate-12 transition-all duration-300 shadow-xl">
-              <FileText className="h-7 w-7 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold text-black">Elegant Invoices</h3>
-            <p className="text-gray-700 font-medium">Generate beautiful, monochrome invoices that reflect your studio's premium and timeless brand.</p>
-          </div>
-        </motion.div>
       </main>
       
       <footer className="py-8 text-center text-gray-800 font-medium mt-16 relative z-10">

@@ -13,7 +13,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
 
   if (!dbUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-[#9b9b9b] to-[#f5f5f5] p-4">
         <div className="text-center p-8 bg-white rounded-xl shadow-sm border max-w-md">
           <h2 className="text-2xl font-bold mb-2 text-gray-900">Error Loading Profile</h2>
           <p className="text-gray-600 mb-6">We could not load your account information. The server might be unreachable or your session is invalid.</p>
