@@ -1,18 +1,21 @@
 import LoadingScreen from '../components/LoadingScreen';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Plus, Trash2, ArrowRight, Save } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ReviewOCR() {
   const navigate = useNavigate();
+  const { getToken } = useAuth();
   const [data, setData] = useState<any>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const savedData = sessionStorage.getItem('extractedBillData');
@@ -49,7 +52,7 @@ export default function ReviewOCR() {
            amount = qNum * rNum;
         }
         
-        return { ...item, quantity: qNum || undefined, rate: rNum || undefined, amount };
+        return { ...item, quantity: qNum || 1, rate: rNum || 0, amount };
       });
       if (!parsed.date) parsed.date = new Date().toISOString().split('T')[0];
       if (!parsed.invoiceNumber) parsed.invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
@@ -70,8 +73,11 @@ export default function ReviewOCR() {
   }, [navigate]);
 
   const updateField = (field: string, value: string | number) => {
-    setData((prev: any) => ({ ...prev, [field]: value }));
-    calculateTotals({ ...data, [field]: value });
+    setData((prev: any) => {
+      const updated = { ...prev, [field]: value };
+      calculateTotals(updated);
+      return updated;
+    });
   };
 
   const updateItem = (index: number, field: string, value: string | number) => {
@@ -86,7 +92,6 @@ export default function ReviewOCR() {
     } else if (field === 'amount') {
       const a = parseFloat(String(value)) || 0;
       const qStr = String(newItems[index].quantity || '').trim();
-      const rStr = String(newItems[index].rate || '').trim();
       
       let q = parseFloat(qStr);
       if (isNaN(q) || q === 0) {
@@ -103,10 +108,14 @@ export default function ReviewOCR() {
   };
 
   const addItem = () => {
-    setData((prev: any) => ({
-      ...prev,
-      items: [...prev.items, { description: '', quantity: 1, rate: 0, amount: 0 }]
-    }));
+    setData((prev: any) => {
+      const updated = {
+        ...prev,
+        items: [...prev.items, { description: '', quantity: 1, rate: 0, amount: 0 }]
+      };
+      calculateTotals(updated);
+      return updated;
+    });
   };
 
   const removeItem = (index: number) => {
@@ -130,7 +139,7 @@ export default function ReviewOCR() {
     }));
   };
 
-  const handleGenerateInvoice = () => {
+  const handleGenerateInvoice = async () => {
     if (!data.customerName?.trim()) {
       toast.error('Customer Name is required');
       return;
@@ -148,23 +157,65 @@ export default function ReviewOCR() {
       return;
     }
 
-    // Force recalculate totals to guarantee consistency
-    const subtotal = data.items.reduce((sum: number, item: any) => sum + (parseFloat(item.amount) || 0), 0);
-    const tax = parseFloat(data.taxAmount) || 0;
-    const discount = parseFloat(data.discount) || 0;
-    const grandTotal = subtotal + tax - discount;
-    
-    const finalData = {
-      ...data,
-      subtotal,
-      taxAmount: tax,
-      discount,
-      grandTotal
-    };
+    setIsSaving(true);
+    try {
+      // Recalculate totals
+      const subtotal = data.items.reduce((sum: number, item: any) => sum + (parseFloat(item.amount) || 0), 0);
+      const tax = parseFloat(data.taxAmount) || 0;
+      const discount = parseFloat(data.discount) || 0;
+      const grandTotal = subtotal + tax - discount;
+      
+      const payload = {
+        customerName: data.customerName.trim(),
+        phone: data.phone || null,
+        address: data.address || null,
+        invoiceNumber: data.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+        date: data.date || new Date().toISOString().split('T')[0],
+        subtotal,
+        discount,
+        taxAmount: tax,
+        grandTotal,
+        notes: data.notes || null,
+        status: data.status || 'PAID',
+        paymentMethod: data.paymentMethod || 'Cash',
+        paymentReference: data.paymentReference || null,
+        items: data.items.map((i: any) => ({
+          description: i.description,
+          quantity: Number(i.quantity) || 1,
+          rate: Number(i.rate) || 0,
+          amount: Number(i.amount) || 0,
+        }))
+      };
 
-    sessionStorage.setItem('finalInvoiceData', JSON.stringify(finalData));
-    toast.success('Invoice data verified and saved');
-    navigate('/bills/preview');
+      const token = await getToken();
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to save bill to database');
+      }
+
+      const savedInvoice = await response.json();
+      toast.success('Bill generated and saved to History!');
+
+      sessionStorage.setItem('finalInvoiceData', JSON.stringify(payload));
+      sessionStorage.removeItem('extractedBillData');
+      sessionStorage.removeItem('billImagePreview');
+
+      navigate('/bills/preview', { state: { invoiceData: payload, isSaved: true, invoiceId: savedInvoice.id } });
+    } catch (error: any) {
+      console.error("Save invoice error:", error);
+      toast.error(error.message || 'Failed to save invoice');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!data) return <LoadingScreen message="Loading extracted data..." />;
@@ -341,9 +392,22 @@ export default function ReviewOCR() {
                </div>
                
                <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
-                 <Button onClick={handleGenerateInvoice} className="h-12 px-8 bg-black hover:bg-gray-800 text-white w-full sm:w-auto">
-                   Generate Invoice
-                   <ArrowRight className="ml-2 h-4 w-4" />
+                 <Button 
+                   onClick={handleGenerateInvoice} 
+                   disabled={isSaving}
+                   className="h-12 px-8 bg-black hover:bg-gray-800 text-white w-full sm:w-auto font-medium"
+                 >
+                   {isSaving ? (
+                     <>
+                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       Saving Bill to History...
+                     </>
+                   ) : (
+                     <>
+                       Generate Invoice
+                       <ArrowRight className="ml-2 h-4 w-4" />
+                     </>
+                   )}
                  </Button>
                </div>
             </CardContent>

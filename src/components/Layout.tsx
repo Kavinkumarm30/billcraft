@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   LayoutDashboard, 
-  FileText, 
+  History, 
   PlusCircle, 
   FileSearch, 
   Users, 
@@ -23,7 +23,7 @@ export default function Layout() {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Invoices', href: '/bills', icon: FileText },
+    { name: 'History', href: '/bills', icon: History },
     { name: 'Create Invoice', href: '/bills/create', icon: PlusCircle },
     { name: 'OCR Upload', href: '/bills/review', icon: FileSearch },
     { name: 'Customers', href: '/customers', icon: Users },
