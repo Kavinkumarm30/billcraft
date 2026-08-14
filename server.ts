@@ -228,6 +228,222 @@ const PORT = 3000;
     }
   });
 
+  // AI Layout Extractor from Sample Bill
+  app.post("/api/settings/extract-layout", requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No bill image file uploaded" });
+      }
+
+      const base64Image = req.file.buffer.toString("base64");
+
+      const promptParts = [
+        {
+          inlineData: {
+            mimeType: req.file.mimetype,
+            data: base64Image,
+          }
+        },
+        {
+          text: `You are an expert document design and visual layout analysis AI.
+Analyze the visual layout structure, section coordinates, colors, typography, and styling of this invoice or bill image, and reconstruct it into an 800px width by 1050px height A4 canvas design.
+
+Map the document into the following standard invoice blocks:
+1. "company_header": Logo, Company Name, address, contact, GST (estimate x: 20-750, y: 20-250, width: 200-760, textAlign: left/center/right, textColor, bgColor)
+2. "invoice_meta": "INVOICE" header title, Invoice number, Date, Status/badge (estimate x, y, width, textAlign, textColor, bgColor)
+3. "billed_to": Customer details box (Customer Name, Address, Phone)
+4. "items_table": Table containing line items, descriptions, quantities, rates, and amounts
+5. "totals_card": Subtotal, Discount, Tax, and Grand Total block
+6. "bank_details": Bank account, IFSC, UPI ID details (if present, otherwise set visible: false)
+7. "notes_terms": Terms, payment conditions, notes (if present)
+8. "signature_block": Authorized signature line / stamp (if present)
+
+Also detect:
+- Dominant primary brand color / accent (hex code e.g. #18181b, #2563eb, #ea580c, #059669, etc.)
+- Typography style: "sans" | "serif" | "mono"
+- Canvas background color (usually "#ffffff")
+
+Return STRICTLY valid JSON conforming to this schema:
+{
+  "canvasBg": "#ffffff",
+  "primaryColor": "#18181b",
+  "fontFamily": "sans",
+  "canvasHeight": 1050,
+  "elements": [
+    {
+      "id": "company_header",
+      "name": "Company Header & Logo",
+      "type": "company_header",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 14,
+      "textColor": "#18181b",
+      "bgColor": "transparent",
+      "textAlign": "left",
+      "fontWeight": "bold",
+      "visible": true
+    },
+    {
+      "id": "invoice_meta",
+      "name": "Invoice Title & Meta",
+      "type": "invoice_meta",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 13,
+      "textColor": "#18181b",
+      "bgColor": "transparent",
+      "textAlign": "right",
+      "fontWeight": "bold",
+      "visible": true
+    },
+    {
+      "id": "billed_to",
+      "name": "Billed To (Customer Details)",
+      "type": "billed_to",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 13,
+      "textColor": "#1f2937",
+      "bgColor": "#f9fafb",
+      "borderColor": "#e5e7eb",
+      "borderWidth": 1,
+      "borderRadius": 12,
+      "padding": 16,
+      "textAlign": "left",
+      "visible": true
+    },
+    {
+      "id": "items_table",
+      "name": "Products & Items Table",
+      "type": "items_table",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 13,
+      "textColor": "#1f2937",
+      "bgColor": "#ffffff",
+      "borderColor": "#e5e7eb",
+      "borderWidth": 1,
+      "borderRadius": 8,
+      "textAlign": "left",
+      "visible": true
+    },
+    {
+      "id": "totals_card",
+      "name": "Subtotal & Grand Total",
+      "type": "totals_card",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 13,
+      "textColor": "#111827",
+      "bgColor": "#f9fafb",
+      "borderColor": "#e5e7eb",
+      "borderWidth": 1,
+      "borderRadius": 12,
+      "padding": 16,
+      "textAlign": "right",
+      "visible": true
+    },
+    {
+      "id": "bank_details",
+      "name": "Bank & UPI Payment Info",
+      "type": "bank_details",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 12,
+      "textColor": "#374151",
+      "bgColor": "#f9fafb",
+      "borderColor": "#e5e7eb",
+      "borderWidth": 1,
+      "borderRadius": 12,
+      "padding": 16,
+      "textAlign": "left",
+      "visible": true
+    },
+    {
+      "id": "notes_terms",
+      "name": "Notes & Terms",
+      "type": "notes_terms",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 12,
+      "textColor": "#6b7280",
+      "bgColor": "transparent",
+      "textAlign": "left",
+      "visible": true
+    },
+    {
+      "id": "signature_block",
+      "name": "Authorized Signature",
+      "type": "signature_block",
+      "x": number,
+      "y": number,
+      "width": number,
+      "fontSize": 12,
+      "textColor": "#4b5563",
+      "bgColor": "transparent",
+      "textAlign": "center",
+      "visible": true
+    }
+  ]
+}
+Ensure all coordinates (x: 20-760, y: 20-1000) are realistic, non-overlapping, and proportional on an 800px width canvas.`
+        }
+      ];
+
+      const modelConfig = {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+      };
+
+      const modelChain = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-latest"];
+      let response;
+      let lastError;
+
+      for (const modelName of modelChain) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: [{ role: "user", parts: promptParts }],
+            config: modelConfig
+          });
+          if (response && response.text) {
+            console.log(`Successfully extracted bill layout using model: ${modelName}`);
+            break;
+          }
+        } catch (err: any) {
+          console.warn(`Gemini model ${modelName} layout extract error, trying next fallback:`, err.message || err);
+          lastError = err;
+        }
+      }
+
+      if (!response || !response.text) {
+        throw lastError || new Error("Failed to extract layout design from AI model");
+      }
+
+      let resultText = response.text;
+      resultText = resultText.replace(/^\s*```(json)?/i, '').replace(/```\s*$/, '').trim();
+
+      const parsedLayout = JSON.parse(resultText);
+
+      // Validate and ensure all required elements exist
+      if (!parsedLayout.elements || !Array.isArray(parsedLayout.elements)) {
+        throw new Error("Invalid layout structure returned by AI");
+      }
+
+      res.json(parsedLayout);
+    } catch (error: any) {
+      console.error("Layout extraction error:", error);
+      res.status(500).json({ error: error.message || "Failed to extract layout design" });
+    }
+  });
+
 
   // Invoices Routes
   

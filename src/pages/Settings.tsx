@@ -33,8 +33,15 @@ import {
   SlidersHorizontal,
   ChevronRight,
   Info,
-  Maximize2
+  Maximize2,
+  Upload,
+  Camera,
+  FileUp,
+  Brain,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
 export interface CanvasElement {
   id: string;
@@ -315,6 +322,12 @@ export default function Settings() {
   const [zoomLevel, setZoomLevel] = useState<number>(0.85);
   const [sidebarPanel, setSidebarPanel] = useState<'templates' | 'elements' | 'styles'>('templates');
 
+  // AI Layout Extractor Dialog State
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [templatePreview, setTemplatePreview] = useState<string | null>(null);
+  const [isExtractingLayout, setIsExtractingLayout] = useState(false);
+
   // Dragging state
   const canvasRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -407,6 +420,66 @@ export default function Settings() {
       invoiceLayout: JSON.stringify(design),
     };
     mutation.mutate(payload);
+  };
+
+  // AI Layout Extraction Handler
+  const handleExtractLayoutWithAi = async () => {
+    if (!templateFile) {
+      toast.error('Please select an invoice or bill image to analyze');
+      return;
+    }
+
+    setIsExtractingLayout(true);
+    const toastId = toast.loading('Gemini AI is analyzing your bill layout, coordinates, and styling...');
+
+    try {
+      const formData = new FormData();
+      formData.append('file', templateFile);
+
+      const token = await getToken();
+      const res = await fetch('/api/settings/extract-layout', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to extract bill layout with AI');
+      }
+
+      const extractedDesign: CanvaLayoutDesign = await res.json();
+      
+      // Merge with default elements to ensure no elements are missing
+      const mergedElements = defaultCanvaDesign.elements.map(defaultEl => {
+        const found = extractedDesign.elements?.find(el => el.type === defaultEl.type || el.id === defaultEl.id);
+        return found ? { ...defaultEl, ...found } : defaultEl;
+      });
+
+      const finalDesign: CanvaLayoutDesign = {
+        canvasBg: extractedDesign.canvasBg || '#ffffff',
+        primaryColor: extractedDesign.primaryColor || '#18181b',
+        fontFamily: extractedDesign.fontFamily || 'sans',
+        canvasHeight: extractedDesign.canvasHeight || 1050,
+        elements: mergedElements
+      };
+
+      setDesign(finalDesign);
+      setIsAiModalOpen(false);
+      setTemplateFile(null);
+      setTemplatePreview(null);
+
+      toast.dismiss(toastId);
+      toast.success('✨ AI successfully extracted your exact bill layout into Canva Studio!');
+    } catch (error: any) {
+      toast.dismiss(toastId);
+      toast.error(error.message || 'AI layout extraction failed. Please try a clearer bill image.');
+      console.error("AI Layout Extract Error:", error);
+    } finally {
+      setIsExtractingLayout(false);
+    }
   };
 
   // Drag and drop event handlers
@@ -532,11 +605,22 @@ export default function Settings() {
           </div>
           <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
             <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-            <span>Click & drag any box to move it anywhere. Use <strong>1-Click Templates</strong> for instant professional designs!</span>
+            <span>Click & drag any box to move it anywhere. Use <strong>AI Layout Cloner</strong> or templates for instant setup!</span>
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {activeTab === 'canva' && (
+            <Button
+              type="button"
+              onClick={() => setIsAiModalOpen(true)}
+              className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold px-3.5 h-9 shadow-md flex items-center gap-1.5 transition-transform active:scale-95"
+            >
+              <Brain className="w-4 h-4" />
+              <span>✨ AI Clone from Bill Photo</span>
+            </Button>
+          )}
+
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button
               type="button"
@@ -617,13 +701,34 @@ export default function Settings() {
               
               {/* 1. TEMPLATES PANEL */}
               {sidebarPanel === 'templates' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Pro Templates</p>
-                    <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">Beginner Friendly</span>
+                <div className="space-y-4">
+                  {/* AI Extractor Banner */}
+                  <div 
+                    onClick={() => setIsAiModalOpen(true)}
+                    className="p-3.5 rounded-xl border border-purple-300 bg-gradient-to-br from-purple-50 via-indigo-50/50 to-white hover:border-purple-600 cursor-pointer transition-all hover:shadow-md group"
+                  >
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="p-1.5 rounded-lg bg-purple-600 text-white shadow-xs">
+                        <Brain className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <h4 className="text-xs font-black text-purple-950 group-hover:text-purple-700 transition-colors">
+                          ✨ AI Bill Layout Cloner
+                        </h4>
+                        <p className="text-[10px] text-purple-700 font-semibold">Upload photo & clone exact design</p>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-600 leading-tight">
+                      Take a photo of your existing bill format and Gemini AI will reproduce the layout into Canva in seconds!
+                    </p>
                   </div>
 
                   <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Pro Templates</p>
+                      <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">Beginner Friendly</span>
+                    </div>
+
                     {prebuiltCanvaTemplates.map((t, idx) => (
                       <div
                         key={idx}
@@ -793,10 +898,21 @@ export default function Settings() {
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
+                  onClick={() => setIsAiModalOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-bold border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-900 shadow-xs flex items-center gap-1"
+                >
+                  <Brain className="w-3.5 h-3.5 text-purple-600" />
+                  ✨ AI Clone Layout
+                </Button>
+
+                <Button
+                  type="button"
                   onClick={handleAutoAlign}
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-bold border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-900 shadow-xs"
+                  className="h-8 text-xs font-bold border-gray-200 text-gray-700 hover:bg-gray-100"
                 >
                   <Wand2 className="w-3.5 h-3.5 mr-1" />
                   Auto-Align
@@ -1241,6 +1357,127 @@ export default function Settings() {
           </CardContent>
         </Card>
       )}
+
+      {/* AI Bill Layout Cloner Modal */}
+      <Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
+        <DialogContent className="sm:max-w-[540px]">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
+                <Brain className="w-5 h-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold text-gray-900">
+                  ✨ AI Bill Layout Cloner
+                </DialogTitle>
+                <DialogDescription className="text-xs text-gray-500">
+                  Upload any sample bill or receipt photo to automatically extract its layout & styling
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            {!templatePreview ? (
+              <label 
+                htmlFor="billTemplateUpload" 
+                className="border-2 border-dashed border-purple-200 hover:border-purple-500 bg-purple-50/30 hover:bg-purple-50/60 transition-all rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer text-center group"
+              >
+                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mb-3 group-hover:scale-110 transition-transform">
+                  <Upload className="w-6 h-6" />
+                </div>
+                <p className="text-sm font-bold text-gray-800">
+                  Click or drag your bill / invoice template here
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Supports JPG, PNG, and PDF screenshots up to 10MB
+                </p>
+                <input 
+                  type="file" 
+                  id="billTemplateUpload" 
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setTemplateFile(file);
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setTemplatePreview(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            ) : (
+              <div className="space-y-3">
+                <div className="relative border rounded-xl overflow-hidden bg-gray-900 flex justify-center max-h-[300px]">
+                  <img src={templatePreview} alt="Template Preview" className="max-h-[300px] object-contain" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTemplateFile(null);
+                      setTemplatePreview(null);
+                    }}
+                    className="absolute top-2 right-2 p-1 bg-black/70 hover:bg-black text-white rounded-full transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-center text-gray-500 font-medium">
+                  {templateFile?.name} ({(templateFile ? templateFile.size / (1024 * 1024) : 0).toFixed(2)} MB)
+                </p>
+              </div>
+            )}
+
+            <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1">
+              <p className="font-bold text-gray-900 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                What Gemini AI analyzes:
+              </p>
+              <ul className="list-disc pl-4 space-y-0.5 text-gray-500 text-[11px]">
+                <li>Exact X & Y positioning and width of Header, Table, Totals, and Notes</li>
+                <li>Dominant brand theme colors and background container cards</li>
+                <li>Alignment (Left, Right, or Center) of titles and totals</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsAiModalOpen(false);
+                setTemplateFile(null);
+                setTemplatePreview(null);
+              }}
+              disabled={isExtractingLayout}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleExtractLayoutWithAi}
+              disabled={!templateFile || isExtractingLayout}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold"
+            >
+              {isExtractingLayout ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Extracting Layout with AI...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4 mr-2" />
+                  Clone Layout to Canva
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
