@@ -209,10 +209,10 @@ export default function ReviewOCR() {
 
       const token = await getToken();
       const targetEditId = isEditing ? (editingInvoiceId || sessionStorage.getItem('editingInvoiceId')) : null;
-      const endpoint = targetEditId ? `/api/invoices/${targetEditId}` : '/api/invoices';
-      const method = targetEditId ? 'PUT' : 'POST';
+      let endpoint = targetEditId ? `/api/invoices/${targetEditId}` : '/api/invoices';
+      let method = targetEditId ? 'PUT' : 'POST';
 
-      const response = await fetch(endpoint, {
+      let response = await fetch(endpoint, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -220,6 +220,19 @@ export default function ReviewOCR() {
         },
         body: JSON.stringify(payload),
       });
+
+      // If PUT responded with 404, smoothly fallback to POST (create)
+      if (!response.ok && response.status === 404 && method === 'PUT') {
+        console.warn("PUT returned 404, creating invoice via POST...");
+        response = await fetch('/api/invoices', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));

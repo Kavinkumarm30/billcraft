@@ -428,13 +428,65 @@ const PORT = 3000;
       if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
 
       const invoiceId = parseInt(req.params.id);
-      if (isNaN(invoiceId)) {
-        return res.status(400).json({ error: "Invalid invoice ID" });
+      const { customerName, phone, address, invoiceNumber, date, subtotal, discount, taxAmount, grandTotal, notes, items, status, paymentMethod, paymentReference } = req.body;
+
+      let targetInvoices: any[] = [];
+      if (!isNaN(invoiceId)) {
+        targetInvoices = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
       }
 
-      const targetInvoices = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+      // If not found by numeric ID, try searching by invoiceNumber
+      if (targetInvoices.length === 0 && invoiceNumber) {
+        targetInvoices = await db.select().from(invoices).where(and(eq(invoices.orgId, u.orgId), eq(invoices.invoiceNumber, invoiceNumber)));
+      }
+
+      // If still not found in database, seamlessly create a new invoice!
       if (targetInvoices.length === 0) {
-        return res.status(404).json({ error: "Invoice not found in database" });
+        let customerId = null;
+        if (customerName) {
+          const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
+          const customer = existingCustomers.find(c => c.name.toLowerCase() === String(customerName).trim().toLowerCase());
+          if (customer) {
+            customerId = customer.id;
+          } else {
+            const newCustomer = await db.insert(customers).values({
+              orgId: u.orgId,
+              name: String(customerName).trim(),
+              phone: phone ? String(phone).trim() : null,
+              address: address ? String(address).trim() : null,
+            }).returning();
+            customerId = newCustomer[0].id;
+          }
+        }
+
+        const newInvoice = await db.insert(invoices).values({
+          orgId: u.orgId,
+          customerId,
+          createdBy: u.id,
+          invoiceNumber: invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+          date: parseSafeDate(date),
+          subtotal: safeNumericStr(subtotal),
+          discount: safeNumericStr(discount),
+          taxAmount: safeNumericStr(taxAmount),
+          grandTotal: safeNumericStr(grandTotal),
+          notes: notes || null,
+          status: status || 'PENDING',
+          paymentMethod: paymentMethod || null,
+          paymentReference: paymentReference || null
+        }).returning();
+
+        if (items && Array.isArray(items) && items.length > 0) {
+          const itemValues = items.map(item => ({
+            invoiceId: newInvoice[0].id,
+            description: item.description || 'Item',
+            quantity: safeNumericStr(item.quantity || 1),
+            rate: safeNumericStr(item.rate || 0),
+            amount: safeNumericStr(item.amount || 0)
+          }));
+          await db.insert(invoiceItems).values(itemValues);
+        }
+
+        return res.json(newInvoice[0]);
       }
 
       const targetInvoice = targetInvoices[0];
@@ -442,7 +494,7 @@ const PORT = 3000;
         return res.status(403).json({ error: "Forbidden: You do not have permission to edit this invoice" });
       }
 
-      const { customerName, phone, address, invoiceNumber, date, subtotal, discount, taxAmount, grandTotal, notes, items, status, paymentMethod, paymentReference } = req.body;
+      const effectiveInvoiceId = targetInvoice.id;
 
       // 1. Update or create customer
       let customerId = targetInvoice.customerId;
@@ -487,15 +539,15 @@ const PORT = 3000;
           paymentReference: paymentReference !== undefined ? paymentReference : targetInvoice.paymentReference,
           updatedAt: new Date()
         })
-        .where(eq(invoices.id, invoiceId))
+        .where(eq(invoices.id, effectiveInvoiceId))
         .returning();
 
       // 3. Update line items
       if (items && Array.isArray(items)) {
-        await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+        await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, effectiveInvoiceId));
         if (items.length > 0) {
           const itemValues = items.map(item => ({
-            invoiceId: invoiceId,
+            invoiceId: effectiveInvoiceId,
             description: item.description || 'Item',
             quantity: safeNumericStr(item.quantity || 1),
             rate: safeNumericStr(item.rate || 0),
