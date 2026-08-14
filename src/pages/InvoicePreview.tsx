@@ -157,7 +157,6 @@ export default function InvoicePreview() {
   const handleDownload = async () => {
     if (!invoiceRef.current) return;
     
-    // We allow downloading even in iframe now!
     const loadingToast = toast.loading('Generating PDF...');
     
     try {
@@ -166,7 +165,7 @@ export default function InvoicePreview() {
       const originalTransform = parent ? parent.style.transform : '';
       if (parent) parent.style.transform = 'none';
 
-      // Small delay to allow browser to apply the transform=none before capturing
+      // Small delay to allow browser to apply transform=none before capturing
       await new Promise(r => setTimeout(r, 100));
 
       const dataUrl = await toPng(invoiceRef.current, {
@@ -180,11 +179,27 @@ export default function InvoicePreview() {
 
       // A4 dimensions in mm
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      // Calculate height to maintain aspect ratio
-      const pdfHeight = (invoiceRef.current.offsetHeight * pdfWidth) / invoiceRef.current.offsetWidth;
+      const pdfWidth = pdf.internal.pageSize.getWidth(); // 210mm
+      const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
       
-      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      // Calculate total image height to maintain aspect ratio
+      const imgHeight = (invoiceRef.current.offsetHeight * pdfWidth) / invoiceRef.current.offsetWidth;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Render First Page
+      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Render subsequent pages if bill height exceeds 1 A4 page
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`Invoice-${data.invoiceNumber || 'download'}.pdf`);
       
       toast.dismiss(loadingToast);
