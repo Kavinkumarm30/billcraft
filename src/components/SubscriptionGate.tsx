@@ -30,11 +30,7 @@ export default function SubscriptionGate({ children }: { children: React.ReactNo
     return <>{children}</>;
   }
 
-  const { subscriptionStatus, trialInvoicesRemaining, onboardingCompleted } = dbUser;
-
-  if (!onboardingCompleted && location.pathname !== '/onboarding') {
-    return <Navigate to="/onboarding" replace />;
-  }
+  const { subscriptionStatus, trialInvoicesRemaining } = dbUser;
 
   if (subscriptionStatus === 'PENDING_VERIFICATION' && location.pathname !== '/payment') {
      return <Navigate to="/payment" replace />;

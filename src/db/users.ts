@@ -48,6 +48,7 @@ export async function getOrCreateUser(uid: string, email: string) {
           role,
           subscriptionStatus,
           trialInvoicesRemaining,
+          onboardingCompleted: true,
         })
         .returning();
       user = result[0];

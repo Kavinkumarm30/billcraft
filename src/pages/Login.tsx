@@ -32,6 +32,7 @@ export default function Login() {
         await loginWithRedirect();
       } else {
         await login();
+        navigate('/dashboard', { replace: true });
       }
       toast.success('Logged in successfully');
     } catch (error: any) {
