@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -8,193 +8,22 @@ import { Label } from '../components/ui/label';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   Loader2, 
-  Palette, 
   LayoutTemplate, 
   Building2, 
   Check, 
-  Sparkles, 
-  Move, 
   Eye, 
-  EyeOff, 
-  ZoomIn, 
-  ZoomOut, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
   CheckCircle2,
-  Wand2,
-  Layers,
   Upload,
   FileCode,
   X,
   FileUp,
   Clock,
-  ExternalLink,
-  ShieldCheck,
-  Smartphone,
-  CreditCard
+  ShieldCheck
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
-
-export interface CanvasElement {
-  id: string;
-  name: string;
-  type: 'company_header' | 'invoice_meta' | 'billed_to' | 'items_table' | 'totals_card' | 'bank_details' | 'signature_block' | 'notes_terms';
-  x: number;
-  y: number;
-  width: number;
-  fontSize?: number;
-  textColor?: string;
-  bgColor?: string;
-  borderColor?: string;
-  borderWidth?: number;
-  borderRadius?: number;
-  padding?: number;
-  textAlign?: 'left' | 'center' | 'right';
-  fontWeight?: 'normal' | 'medium' | 'bold';
-  visible: boolean;
-}
-
-export interface CanvaLayoutDesign {
-  canvasBg: string;
-  primaryColor: string;
-  fontFamily: 'sans' | 'serif' | 'mono';
-  canvasHeight: number;
-  elements: CanvasElement[];
-}
-
-export const defaultCanvaDesign: CanvaLayoutDesign = {
-  canvasBg: '#ffffff',
-  primaryColor: '#18181b',
-  fontFamily: 'sans',
-  canvasHeight: 1050,
-  elements: [
-    {
-      id: 'company_header',
-      name: 'Company Header & Logo',
-      type: 'company_header',
-      x: 40,
-      y: 40,
-      width: 400,
-      fontSize: 14,
-      textColor: '#18181b',
-      bgColor: 'transparent',
-      textAlign: 'left',
-      fontWeight: 'bold',
-      visible: true
-    },
-    {
-      id: 'invoice_meta',
-      name: 'Invoice Title & Meta',
-      type: 'invoice_meta',
-      x: 480,
-      y: 40,
-      width: 280,
-      fontSize: 13,
-      textColor: '#18181b',
-      bgColor: 'transparent',
-      textAlign: 'right',
-      fontWeight: 'bold',
-      visible: true
-    },
-    {
-      id: 'billed_to',
-      name: 'Billed To (Customer Details)',
-      type: 'billed_to',
-      x: 40,
-      y: 160,
-      width: 720,
-      fontSize: 13,
-      textColor: '#1f2937',
-      bgColor: '#f9fafb',
-      borderColor: '#e5e7eb',
-      borderWidth: 1,
-      borderRadius: 12,
-      padding: 16,
-      textAlign: 'left',
-      visible: true
-    },
-    {
-      id: 'items_table',
-      name: 'Products & Items Table',
-      type: 'items_table',
-      x: 40,
-      y: 290,
-      width: 720,
-      fontSize: 13,
-      textColor: '#1f2937',
-      bgColor: '#ffffff',
-      borderColor: '#e5e7eb',
-      borderWidth: 1,
-      borderRadius: 8,
-      textAlign: 'left',
-      visible: true
-    },
-    {
-      id: 'totals_card',
-      name: 'Subtotal & Grand Total',
-      type: 'totals_card',
-      x: 480,
-      y: 540,
-      width: 280,
-      fontSize: 13,
-      textColor: '#111827',
-      bgColor: '#f9fafb',
-      borderColor: '#e5e7eb',
-      borderWidth: 1,
-      borderRadius: 12,
-      padding: 16,
-      textAlign: 'right',
-      visible: true
-    },
-    {
-      id: 'bank_details',
-      name: 'Bank & UPI Payment Info',
-      type: 'bank_details',
-      x: 40,
-      y: 540,
-      width: 410,
-      fontSize: 12,
-      textColor: '#374151',
-      bgColor: '#f9fafb',
-      borderColor: '#e5e7eb',
-      borderWidth: 1,
-      borderRadius: 12,
-      padding: 16,
-      textAlign: 'left',
-      visible: true
-    },
-    {
-      id: 'notes_terms',
-      name: 'Notes & Terms',
-      type: 'notes_terms',
-      x: 40,
-      y: 690,
-      width: 440,
-      fontSize: 12,
-      textColor: '#6b7280',
-      bgColor: 'transparent',
-      textAlign: 'left',
-      visible: true
-    },
-    {
-      id: 'signature_block',
-      name: 'Authorized Signature',
-      type: 'signature_block',
-      x: 520,
-      y: 690,
-      width: 240,
-      fontSize: 12,
-      textColor: '#4b5563',
-      bgColor: 'transparent',
-      textAlign: 'center',
-      visible: true
-    }
-  ]
-};
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog';
 
 // Predefined Prebuilt Standard Invoice Layouts
-const predefinedLayouts = [
+export const predefinedLayouts = [
   { id: 'standard', name: 'Standard', badge: 'Logo Left', desc: 'Classic business invoice with company details on the left' },
   { id: 'modern', name: 'Modern', badge: 'Logo Right', desc: 'Contemporary layout with brand logo on the right side' },
   { id: 'minimal', name: 'Minimal', badge: 'Centered', desc: 'Clean centered typography with slim divider lines' },
@@ -212,8 +41,8 @@ export default function Settings() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
-  // 3 Distinct Main Pages inside Settings
-  const [activeTab, setActiveTab] = useState<'upload' | 'canva' | 'details'>('details');
+  // 2 Distinct Main Pages inside Settings: Upload the Bill & Company Details
+  const [activeTab, setActiveTab] = useState<'upload' | 'details'>('details');
   
   // Organization profile states
   const [companyName, setCompanyName] = useState('');
@@ -231,31 +60,12 @@ export default function Settings() {
   // Preview Layout Modal state
   const [previewingLayout, setPreviewingLayout] = useState<any | null>(null);
 
-  // Canva Designer state
-  const [design, setDesign] = useState<CanvaLayoutDesign>(defaultCanvaDesign);
-  const [selectedElementId, setSelectedElementId] = useState<string | null>('company_header');
-  const [zoomLevel, setZoomLevel] = useState<number>(0.85);
-  const [sidebarPanel, setSidebarPanel] = useState<'elements' | 'styles'>('elements');
-
   // Upload Custom Bill state
   const [customFile, setCustomFile] = useState<File | null>(null);
   const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
   const [customNote, setCustomNote] = useState('');
   const [isSubmittingCustom, setIsSubmittingCustom] = useState(false);
   const [fullPreviewUrl, setFullPreviewUrl] = useState<string | null>(null);
-
-  // Dragging state for Canva
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const isResizingRef = useRef(false);
-  const dragTargetIdRef = useRef<string | null>(null);
-  const dragStartPosRef = useRef<{ mouseX: number; mouseY: number; elemX: number; elemY: number; elemWidth: number }>({
-    mouseX: 0,
-    mouseY: 0,
-    elemX: 0,
-    elemY: 0,
-    elemWidth: 0
-  });
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],
@@ -294,19 +104,9 @@ export default function Settings() {
       setIfsc(settings.ifsc || '');
       setUpiId(settings.upiId || '');
 
-      // Load Canva design or predefined layout
       if (settings.invoiceLayout) {
-        try {
-          if (settings.invoiceLayout.startsWith('{')) {
-            const parsed = JSON.parse(settings.invoiceLayout);
-            if (parsed.elements && Array.isArray(parsed.elements)) {
-              setDesign(parsed);
-            }
-          } else {
-            setSelectedLayoutId(settings.invoiceLayout);
-          }
-        } catch (e) {
-          console.error("Error parsing design:", e);
+        if (!settings.invoiceLayout.startsWith('{')) {
+          setSelectedLayoutId(settings.invoiceLayout);
         }
       }
     }
@@ -347,7 +147,7 @@ export default function Settings() {
       accountNo,
       ifsc,
       upiId,
-      invoiceLayout: layoutToSave || (activeTab === 'canva' ? JSON.stringify(design) : selectedLayoutId),
+      invoiceLayout: layoutToSave || selectedLayoutId,
     };
     mutation.mutate(payload);
   };
@@ -388,107 +188,6 @@ export default function Settings() {
     }
   };
 
-  // Canva Drag and Drop event handlers
-  const handlePointerDown = (e: React.PointerEvent, elementId: string, isResizeHandle: boolean = false) => {
-    e.stopPropagation();
-    setSelectedElementId(elementId);
-    
-    const elem = design.elements.find(el => el.id === elementId);
-    if (!elem) return;
-
-    if (isResizeHandle) {
-      isResizingRef.current = true;
-    } else {
-      isDraggingRef.current = true;
-    }
-
-    dragTargetIdRef.current = elementId;
-    dragStartPosRef.current = {
-      mouseX: e.clientX,
-      mouseY: e.clientY,
-      elemX: elem.x,
-      elemY: elem.y,
-      elemWidth: elem.width || 300
-    };
-
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current && !isResizingRef.current) return;
-    if (!dragTargetIdRef.current) return;
-
-    const deltaX = (e.clientX - dragStartPosRef.current.mouseX) / zoomLevel;
-    const deltaY = (e.clientY - dragStartPosRef.current.mouseY) / zoomLevel;
-
-    setDesign(prev => {
-      const newElements = prev.elements.map(el => {
-        if (el.id !== dragTargetIdRef.current) return el;
-        
-        if (isDraggingRef.current) {
-          const rawX = dragStartPosRef.current.elemX + deltaX;
-          const rawY = dragStartPosRef.current.elemY + deltaY;
-          const snappedX = Math.max(20, Math.min(780 - el.width, Math.round(rawX / 10) * 10));
-          const snappedY = Math.max(20, Math.min(prev.canvasHeight - 50, Math.round(rawY / 10) * 10));
-          return { ...el, x: snappedX, y: snappedY };
-        }
-
-        if (isResizingRef.current) {
-          const rawW = dragStartPosRef.current.elemWidth + deltaX;
-          const snappedW = Math.max(160, Math.min(780 - el.x, Math.round(rawW / 10) * 10));
-          return { ...el, width: snappedW };
-        }
-
-        return el;
-      });
-      return { ...prev, elements: newElements };
-    });
-  };
-
-  const handlePointerUp = () => {
-    isDraggingRef.current = false;
-    isResizingRef.current = false;
-    dragTargetIdRef.current = null;
-  };
-
-  const updateSelectedElement = (updates: Partial<CanvasElement>) => {
-    if (!selectedElementId) return;
-    setDesign(prev => ({
-      ...prev,
-      elements: prev.elements.map(el => el.id === selectedElementId ? { ...el, ...updates } : el)
-    }));
-  };
-
-  // 1-Click Auto Align
-  const handleAutoAlign = () => {
-    setDesign(prev => ({
-      ...prev,
-      elements: [
-        { ...prev.elements[0], x: 40, y: 40, width: 400, textAlign: 'left' },
-        { ...prev.elements[1], x: 480, y: 40, width: 280, textAlign: 'right' },
-        { ...prev.elements[2], x: 40, y: 160, width: 720 },
-        { ...prev.elements[3], x: 40, y: 290, width: 720 },
-        { ...prev.elements[4], x: 480, y: 540, width: 280 },
-        { ...prev.elements[5], x: 40, y: 540, width: 410 },
-        { ...prev.elements[6], x: 40, y: 690, width: 440 },
-        { ...prev.elements[7], x: 520, y: 690, width: 240, textAlign: 'center' },
-      ]
-    }));
-    toast.success('✨ Auto-Aligned all bill sections with perfect spacing!');
-  };
-
-  // Center Element Horizontally
-  const handleCenterElement = () => {
-    if (!selectedElementId) return;
-    const elem = design.elements.find(el => el.id === selectedElementId);
-    if (!elem) return;
-    const centeredX = Math.round((800 - elem.width) / 20) * 10;
-    updateSelectedElement({ x: centeredX });
-    toast.success(`Centered "${elem.name}" on canvas`);
-  };
-
-  const selectedElem = design.elements.find(el => el.id === selectedElementId);
-
   if (isLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center">
@@ -498,10 +197,10 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-4 max-w-full">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       
-      {/* Top Main Navigation Header with 3 Pages */}
-      <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
+      {/* Top Main Navigation Header */}
+      <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs rounded-2xl">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="px-3 py-1 rounded-full text-xs font-black bg-black text-white shadow-xs">
@@ -510,18 +209,18 @@ export default function Settings() {
             <h1 className="text-xl font-black text-gray-900 tracking-tight">Organization & Bill Settings</h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Upload custom layouts, edit bills with Canva studio, or manage company profile & presets
+            Upload custom layouts, manage predefined bill templates, and update company profile
           </p>
         </div>
 
-        {/* 3 Main Tabs */}
-        <div className="flex items-center gap-3 flex-wrap">
+        {/* 2 Main Tabs: Upload the Bill & Company Details */}
+        <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 p-1 rounded-xl">
             {/* Page 1: Upload the Bill */}
             <button
               type="button"
               onClick={() => setActiveTab('upload')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
                 activeTab === 'upload' 
                   ? 'bg-amber-500 text-white shadow-sm' 
                   : 'text-gray-600 hover:text-black'
@@ -531,25 +230,11 @@ export default function Settings() {
               Upload the Bill
             </button>
 
-            {/* Page 2: Canva Editor */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('canva')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                activeTab === 'canva' 
-                  ? 'bg-purple-600 text-white shadow-sm' 
-                  : 'text-gray-600 hover:text-black'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Canva Editor
-            </button>
-
-            {/* Page 3: Company Details & Predefined Layouts */}
+            {/* Page 2: Company Details (Predefined Layouts) */}
             <button
               type="button"
               onClick={() => setActiveTab('details')}
-              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
                 activeTab === 'details' 
                   ? 'bg-blue-600 text-white shadow-sm' 
                   : 'text-gray-600 hover:text-black'
@@ -559,17 +244,6 @@ export default function Settings() {
               Company Details (Predefined Layouts)
             </button>
           </div>
-
-          {activeTab === 'canva' && (
-            <Button 
-              onClick={() => handleSaveProfileAndLayout(JSON.stringify(design))} 
-              disabled={mutation.isPending} 
-              className="bg-black hover:bg-gray-800 text-white text-xs font-bold px-5 h-9 shadow-md transition-transform active:scale-95"
-            >
-              {mutation.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Save Design
-            </Button>
-          )}
         </div>
       </div>
 
@@ -577,7 +251,7 @@ export default function Settings() {
       {/* PAGE 1: UPLOAD THE BILL (CUSTOM BILL LAYOUT SUBMISSION & STATUS)           */}
       {/* ========================================================================= */}
       {activeTab === 'upload' && (
-        <div className="space-y-6 max-w-5xl">
+        <div className="space-y-6">
           
           {/* Main Upload Card */}
           <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
@@ -772,509 +446,10 @@ export default function Settings() {
       )}
 
       {/* ========================================================================= */}
-      {/* PAGE 2: CANVA EDITOR (FREEFORM DRAG & DROP CUSTOMIZER)                    */}
-      {/* ========================================================================= */}
-      {activeTab === 'canva' && (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-135px)] min-h-[720px] border border-gray-200 bg-gray-100 rounded-2xl overflow-hidden shadow-sm">
-          
-          {/* Canva Left Control Sidebar */}
-          <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col shrink-0">
-            {/* Sidebar Navigation */}
-            <div className="flex border-b border-gray-100 bg-gray-50/80 p-1.5 gap-1">
-              <button
-                type="button"
-                onClick={() => setSidebarPanel('elements')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  sidebarPanel === 'elements' ? 'bg-white text-purple-700 shadow-xs' : 'text-gray-500 hover:text-black'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                Elements
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidebarPanel('styles')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  sidebarPanel === 'styles' ? 'bg-white text-purple-700 shadow-xs' : 'text-gray-500 hover:text-black'
-                }`}
-              >
-                <Palette className="w-3.5 h-3.5" />
-                Colors & Themes
-              </button>
-            </div>
-
-            {/* Sidebar Panel Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              
-              {/* 1. ELEMENTS PANEL */}
-              {sidebarPanel === 'elements' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-black uppercase tracking-wider text-gray-400">Invoice Blocks</p>
-                    <button
-                      type="button"
-                      onClick={handleAutoAlign}
-                      className="text-[11px] text-purple-700 font-bold flex items-center gap-1 hover:underline"
-                    >
-                      <Wand2 className="w-3 h-3" /> Auto-Align
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {design.elements.map((elem) => (
-                      <div
-                        key={elem.id}
-                        onClick={() => setSelectedElementId(elem.id)}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                          selectedElementId === elem.id ? 'border-purple-600 bg-purple-50/70 shadow-xs ring-1 ring-purple-600' : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Move className="w-3.5 h-3.5 text-gray-400" />
-                          <div>
-                            <p className="text-xs font-bold text-gray-900">{elem.name}</p>
-                            <p className="text-[10px] text-gray-400 font-mono">({elem.x}px, {elem.y}px)</p>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDesign(prev => ({
-                              ...prev,
-                              elements: prev.elements.map(el => el.id === elem.id ? { ...el, visible: !el.visible } : el)
-                            }));
-                          }}
-                          className="p-1 hover:bg-gray-200 rounded text-gray-500 transition-colors"
-                          title={elem.visible ? 'Hide from canvas' : 'Show on canvas'}
-                        >
-                          {elem.visible ? <Eye className="w-4 h-4 text-gray-600" /> : <EyeOff className="w-4 h-4 text-red-500" />}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 2. THEMES & STYLES PANEL */}
-              {sidebarPanel === 'styles' && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Theme Color Swatches</Label>
-                    <div className="flex flex-wrap gap-2 items-center">
-                      {[
-                        { name: 'Obsidian', hex: '#18181b' },
-                        { name: 'Royal Blue', hex: '#2563eb' },
-                        { name: 'Emerald', hex: '#059669' },
-                        { name: 'Sunset', hex: '#ea580c' },
-                        { name: 'Ruby', hex: '#dc2626' },
-                        { name: 'Purple', hex: '#7c3aed' },
-                        { name: 'Amber', hex: '#d97706' },
-                        { name: 'Cyan', hex: '#0891b2' },
-                      ].map(swatch => (
-                        <button
-                          key={swatch.hex}
-                          type="button"
-                          onClick={() => setDesign(p => ({ ...p, primaryColor: swatch.hex }))}
-                          className={`w-7 h-7 rounded-full transition-transform hover:scale-110 shadow-xs flex items-center justify-center ${
-                            design.primaryColor === swatch.hex ? 'ring-2 ring-offset-2 ring-black scale-110' : ''
-                          }`}
-                          style={{ backgroundColor: swatch.hex }}
-                          title={swatch.name}
-                        >
-                          {design.primaryColor === swatch.hex && <Check className="w-3.5 h-3.5 text-white" />}
-                        </button>
-                      ))}
-                      <div className="flex items-center gap-1 border rounded-lg px-2 py-1 bg-gray-50 ml-1">
-                        <input 
-                          type="color" 
-                          value={design.primaryColor}
-                          onChange={(e) => setDesign(p => ({ ...p, primaryColor: e.target.value }))}
-                          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent" 
-                        />
-                        <span className="text-[10px] font-mono font-bold uppercase">{design.primaryColor}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Typography Font</Label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {[
-                        { id: 'sans', label: 'Sans' },
-                        { id: 'serif', label: 'Serif' },
-                        { id: 'mono', label: 'Mono' }
-                      ].map(f => (
-                        <button
-                          key={f.id}
-                          type="button"
-                          onClick={() => setDesign(p => ({ ...p, fontFamily: f.id as any }))}
-                          className={`py-2 text-xs font-bold rounded-lg border text-center transition-all ${
-                            design.fontFamily === f.id ? 'border-black bg-black text-white shadow-xs' : 'border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 pt-2 border-t border-gray-100">
-                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Canvas Page Height</Label>
-                    <div className="flex items-center gap-2">
-                      <Input 
-                        type="number"
-                        value={design.canvasHeight}
-                        onChange={(e) => setDesign(p => ({ ...p, canvasHeight: Math.max(800, parseInt(e.target.value) || 1050) }))}
-                        className="h-8 text-xs font-mono font-bold"
-                      />
-                      <span className="text-xs text-gray-500 font-semibold">px (A4 Height)</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* Canva Canvas Workspace & Top Bar */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            
-            {/* Canva Top Floating Toolbar */}
-            <div className="p-2 px-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 shadow-xs z-10">
-              
-              {/* Quick Actions */}
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={handleAutoAlign}
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-bold border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-900 shadow-xs"
-                >
-                  <Wand2 className="w-3.5 h-3.5 mr-1" />
-                  Auto-Align
-                </Button>
-
-                {selectedElem && (
-                  <Button
-                    type="button"
-                    onClick={handleCenterElement}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs font-medium text-gray-700 hover:bg-gray-100"
-                  >
-                    <AlignCenter className="w-3.5 h-3.5 mr-1" />
-                    Center Element
-                  </Button>
-                )}
-              </div>
-
-              {/* Selected Element Formatting Bar */}
-              {selectedElem && (
-                <div className="flex items-center gap-2 flex-wrap text-xs bg-gray-50 p-1 rounded-xl border border-gray-200">
-                  <span className="font-black text-gray-800 px-2 py-0.5 rounded bg-white text-xs shadow-2xs">
-                    {selectedElem.name}
-                  </span>
-
-                  {/* Alignment */}
-                  <div className="flex border rounded-lg bg-white overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => updateSelectedElement({ textAlign: 'left' })}
-                      className={`p-1.5 ${selectedElem.textAlign === 'left' ? 'bg-gray-200 font-bold' : 'hover:bg-gray-100'}`}
-                      title="Align Left"
-                    >
-                      <AlignLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateSelectedElement({ textAlign: 'center' })}
-                      className={`p-1.5 ${selectedElem.textAlign === 'center' ? 'bg-gray-200 font-bold' : 'hover:bg-gray-100'}`}
-                      title="Align Center"
-                    >
-                      <AlignCenter className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => updateSelectedElement({ textAlign: 'right' })}
-                      className={`p-1.5 ${selectedElem.textAlign === 'right' ? 'bg-gray-200 font-bold' : 'hover:bg-gray-100'}`}
-                      title="Align Right"
-                    >
-                      <AlignRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  {/* Text Color */}
-                  <div className="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
-                    <span className="text-gray-400 text-[10px] font-bold">Text:</span>
-                    <input 
-                      type="color" 
-                      value={selectedElem.textColor || '#000000'}
-                      onChange={(e) => updateSelectedElement({ textColor: e.target.value })}
-                      className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
-                    />
-                  </div>
-
-                  {/* Bg Color */}
-                  <div className="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
-                    <span className="text-gray-400 text-[10px] font-bold">Bg:</span>
-                    <input 
-                      type="color" 
-                      value={selectedElem.bgColor && selectedElem.bgColor !== 'transparent' ? selectedElem.bgColor : '#ffffff'}
-                      onChange={(e) => updateSelectedElement({ bgColor: e.target.value })}
-                      className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => updateSelectedElement({ bgColor: 'transparent' })}
-                      className="text-[10px] text-gray-500 hover:text-black font-semibold ml-0.5"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Zoom Controls */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))}
-                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="w-4 h-4" />
-                </button>
-                <span className="text-xs font-mono text-gray-700 font-bold px-1">{Math.round(zoomLevel * 100)}%</span>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(prev => Math.min(1.4, prev + 0.1))}
-                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(0.85)}
-                  className="text-[11px] font-bold text-gray-500 hover:text-black underline ml-1"
-                >
-                  Fit View
-                </button>
-              </div>
-
-            </div>
-
-            {/* Interactive Drag & Drop Canvas Board */}
-            <div 
-              className="flex-1 overflow-auto p-8 flex justify-center items-start bg-gray-200/70 select-none cursor-default"
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-            >
-              <div 
-                ref={canvasRef}
-                style={{
-                  width: '800px',
-                  height: `${design.canvasHeight}px`,
-                  transform: `scale(${zoomLevel})`,
-                  transformOrigin: 'top center',
-                  backgroundColor: design.canvasBg,
-                }}
-                className={`relative bg-white shadow-2xl transition-transform border border-gray-300 rounded-sm ${
-                  design.fontFamily === 'serif' ? 'font-serif' : 
-                  design.fontFamily === 'mono' ? 'font-mono' : 'font-sans'
-                }`}
-              >
-                {/* Visual Canvas Grid Background */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-50"></div>
-
-                {/* Canva Draggable Elements */}
-                {design.elements.filter(el => el.visible).map((el) => {
-                  const isSelected = selectedElementId === el.id;
-
-                  return (
-                    <div
-                      key={el.id}
-                      onPointerDown={(e) => handlePointerDown(e, el.id, false)}
-                      style={{
-                        position: 'absolute',
-                        left: `${el.x}px`,
-                        top: `${el.y}px`,
-                        width: `${el.width}px`,
-                        backgroundColor: el.bgColor || 'transparent',
-                        color: el.textColor || 'inherit',
-                        fontSize: el.fontSize ? `${el.fontSize}px` : undefined,
-                        borderColor: el.borderColor || 'transparent',
-                        borderWidth: el.borderWidth ? `${el.borderWidth}px` : undefined,
-                        borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
-                        padding: el.padding ? `${el.padding}px` : undefined,
-                        textAlign: el.textAlign || 'left',
-                        cursor: 'grab'
-                      }}
-                      className={`group transition-shadow ${
-                        isSelected 
-                          ? 'ring-2 ring-purple-600 ring-offset-2 shadow-xl z-30' 
-                          : 'hover:ring-1 hover:ring-purple-400 hover:shadow-md'
-                      }`}
-                    >
-                      {/* Selection Badge & Resize Handle */}
-                      {isSelected && (
-                        <>
-                          <div className="absolute -top-7 left-0 bg-purple-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 pointer-events-none tracking-wide">
-                            <Move className="w-2.5 h-2.5" />
-                            {el.name} ({el.x}px, {el.y}px)
-                          </div>
-                          
-                          <div 
-                            onPointerDown={(e) => handlePointerDown(e, el.id, true)}
-                            className="absolute -right-2 top-1/2 -translate-y-1/2 w-3.5 h-7 bg-purple-600 border border-white rounded cursor-ew-resize hover:scale-125 transition-transform z-40 shadow-sm"
-                            title="Drag to resize width"
-                          />
-                        </>
-                      )}
-
-                      {/* Element Type Renderers */}
-                      {el.type === 'company_header' && (
-                        <div className="flex items-center gap-3">
-                          {logoUrl ? (
-                            <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded" />
-                          ) : (
-                            <div 
-                              className="h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-sm font-black text-base shrink-0"
-                              style={{ backgroundColor: design.primaryColor }}
-                            >
-                              {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
-                            </div>
-                          )}
-                          <div>
-                            <h2 className="text-lg font-black leading-tight" style={{ color: design.primaryColor }}>
-                              {companyName || 'My Company Name'}
-                            </h2>
-                            <p className="text-xs text-gray-500 leading-tight mt-0.5">{address || '123 Business Way, Suite 100'}</p>
-                            {gstNo && <p className="text-[11px] font-bold text-gray-600 mt-0.5">GST: {gstNo}</p>}
-                          </div>
-                        </div>
-                      )}
-
-                      {el.type === 'invoice_meta' && (
-                        <div className="space-y-0.5">
-                          <h3 className="text-2xl font-black tracking-wider uppercase leading-none" style={{ color: design.primaryColor }}>
-                            INVOICE
-                          </h3>
-                          <p className="text-xs font-bold text-gray-900">Invoice No: INV-591499</p>
-                          <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
-                          <div className="mt-1">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                              <CheckCircle2 className="w-3 h-3 text-green-600" />
-                              PAID
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {el.type === 'billed_to' && (
-                        <div>
-                          <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1">Billed To</p>
-                          <p className="font-black text-base text-gray-900">m.kavinkumar</p>
-                          <p className="text-xs text-gray-500 mt-0.5">1/239 kk palli, Phone: +91 9361654668</p>
-                        </div>
-                      )}
-
-                      {el.type === 'items_table' && (
-                        <table className="w-full text-left border-collapse text-xs">
-                          <thead>
-                            <tr className="border-b bg-gray-50/80">
-                              <th className="py-2.5 px-3 font-bold text-gray-700">Description</th>
-                              <th className="py-2.5 px-3 font-bold text-gray-700 text-center">Qty</th>
-                              <th className="py-2.5 px-3 font-bold text-gray-700 text-right">Rate</th>
-                              <th className="py-2.5 px-3 font-bold text-gray-700 text-right">Amount</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            <tr>
-                              <td className="py-2 px-3 text-gray-800 font-medium">Sample Item 1</td>
-                              <td className="py-2 px-3 text-gray-600 text-center">2</td>
-                              <td className="py-2 px-3 text-gray-600 text-right">₹250.00</td>
-                              <td className="py-2 px-3 text-gray-900 font-bold text-right">₹500.00</td>
-                            </tr>
-                            <tr>
-                              <td className="py-2 px-3 text-gray-800 font-medium">Premium Service 2</td>
-                              <td className="py-2 px-3 text-gray-600 text-center">1</td>
-                              <td className="py-2 px-3 text-gray-600 text-right">₹450.00</td>
-                              <td className="py-2 px-3 text-gray-900 font-bold text-right">₹450.00</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      )}
-
-                      {el.type === 'totals_card' && (
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex justify-between text-gray-600">
-                            <span>Subtotal:</span>
-                            <span className="font-semibold">₹950.00</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>Tax (5%):</span>
-                            <span className="font-semibold">₹47.50</span>
-                          </div>
-                          <div 
-                            className="flex justify-between font-black text-base pt-2 border-t mt-1"
-                            style={{ borderColor: design.primaryColor, color: el.textColor || design.primaryColor }}
-                          >
-                            <span>Total Amount:</span>
-                            <span>₹997.50</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {el.type === 'bank_details' && (
-                        <div>
-                          <p className="font-black text-xs uppercase tracking-wider text-gray-700 mb-1.5">Bank & Payment Details</p>
-                          <div className="grid grid-cols-2 gap-1 text-[11px] text-gray-600">
-                            <div>Bank: <span className="font-bold text-gray-800">{bankName || 'State Bank of India'}</span></div>
-                            <div>A/C: <span className="font-bold text-gray-800">{accountNo || 'XXXX123456'}</span></div>
-                            <div>IFSC: <span className="font-bold text-gray-800">{ifsc || 'SBIN0001234'}</span></div>
-                            <div>UPI: <span className="font-bold text-gray-800">{upiId || 'company@upi'}</span></div>
-                          </div>
-                        </div>
-                      )}
-
-                      {el.type === 'notes_terms' && (
-                        <div>
-                          <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Notes & Terms</p>
-                          <p className="text-xs text-gray-600 leading-relaxed">
-                            Payment due within 15 days of invoice date. Thank you for your business!
-                          </p>
-                        </div>
-                      )}
-
-                      {el.type === 'signature_block' && (
-                        <div className="text-center">
-                          <div className="w-32 border-b border-gray-400 mx-auto mb-1.5"></div>
-                          <p className="text-xs font-bold text-gray-700">Authorized Signature</p>
-                          <p className="text-[10px] text-gray-400">{companyName || 'For Organization'}</p>
-                        </div>
-                      )}
-
-                    </div>
-                  );
-                })}
-
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* PAGE 3: COMPANY DETAILS (PREDEFINED LAYOUTS GALLERY & ORG PROFILE)         */}
+      {/* PAGE 2: COMPANY DETAILS (PREDEFINED LAYOUTS GALLERY & ORG PROFILE)         */}
       {/* ========================================================================= */}
       {activeTab === 'details' && (
-        <div className="space-y-6 max-w-5xl">
+        <div className="space-y-6">
           
           {/* Predefined Invoice Layouts Selection Gallery */}
           <Card className="border-0 shadow-sm ring-1 ring-gray-100">

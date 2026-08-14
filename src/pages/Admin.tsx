@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
-import { defaultCanvaDesign } from './Settings';
+import { predefinedLayouts } from './Settings';
 
 export default function Admin() {
   const { getToken, user } = useAuth();
@@ -16,7 +16,7 @@ export default function Admin() {
   // Custom layout builder modal state for Admin
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [customLayoutDesign, setCustomLayoutDesign] = useState<any>(defaultCanvaDesign);
+  const [selectedLayoutForUser, setSelectedLayoutForUser] = useState<string>('orange-classic');
   const [isDesignModalOpen, setIsDesignModalOpen] = useState(false);
 
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -488,29 +488,26 @@ export default function Admin() {
 
               {/* Template Style Choice */}
               <div className="space-y-2">
-                <Label className="text-xs font-bold text-gray-700">Assign Starting Layout Template:</Label>
+                <Label className="text-xs font-bold text-gray-700">Assign Layout Format to Organization:</Label>
                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                  {[
-                    { name: 'Standard Modern', color: '#18181b', font: 'sans', desc: 'Sleek standard layout with left logo' },
-                    { name: 'Orange Classic (Custom Monisha Layout)', color: '#ea580c', font: 'serif', desc: 'Warm boxed cards with custom total cards' },
-                    { name: 'Executive Dark Slate', color: '#0f172a', font: 'sans', desc: 'Dark solid header with corporate styling' },
-                    { name: 'Emerald Fresh', color: '#059669', font: 'sans', desc: 'Centered header with green border accents' },
-                  ].map((tpl, i) => (
+                  {predefinedLayouts.map((tpl) => (
                     <div 
-                      key={i}
+                      key={tpl.id}
                       onClick={() => {
-                        setCustomLayoutDesign((prev: any) => ({
-                          ...prev,
-                          primaryColor: tpl.color,
-                          fontFamily: tpl.font
-                        }));
-                        toast.success(`Selected "${tpl.name}" theme for user`);
+                        setSelectedLayoutForUser(tpl.id);
+                        toast.success(`Selected "${tpl.name}" format for user`);
                       }}
-                      className="p-2.5 rounded-xl border border-gray-200 hover:border-purple-600 cursor-pointer bg-white transition-all text-xs"
+                      className={`p-2.5 rounded-xl border cursor-pointer transition-all text-xs ${
+                        selectedLayoutForUser === tpl.id 
+                          ? 'border-purple-600 bg-purple-50 ring-1 ring-purple-600' 
+                          : 'border-gray-200 hover:border-purple-400 bg-white'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-gray-900">{tpl.name}</span>
-                        <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: tpl.color }} />
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700">
+                          {tpl.badge}
+                        </span>
                       </div>
                       <p className="text-[10px] text-gray-500 mt-0.5">{tpl.desc}</p>
                     </div>
@@ -529,14 +526,14 @@ export default function Admin() {
                 if (!selectedRequest) return;
                 approveLayoutMutation.mutate({
                   requestId: selectedRequest.id,
-                  invoiceLayout: customLayoutDesign
+                  invoiceLayout: selectedLayoutForUser
                 });
               }}
               disabled={approveLayoutMutation.isPending}
               className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
             >
               {approveLayoutMutation.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
-              Save Layout & Grant Access to User
+              Grant Layout Access to User
             </Button>
           </DialogFooter>
         </DialogContent>
