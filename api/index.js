@@ -81671,21 +81671,20 @@ try {
 var createPool = () => {
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (connectionString) {
+    console.log("Connecting PostgreSQL pool using connection string");
     return new Pool2({
       connectionString,
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 15e3
     });
   }
-  const sqlHost = process.env.SQL_HOST;
-  const sqlUser = process.env.SQL_USER;
-  const sqlPassword = process.env.SQL_PASSWORD;
+  const sqlHost = process.env.SQL_HOST || "aws-0-ap-northeast-2.pooler.supabase.com";
+  const sqlUser = process.env.SQL_USER || "postgres.ikdacyqhpwwxxxjkuicd";
+  const sqlPassword = process.env.SQL_PASSWORD || "#Akshay0107";
   const sqlDbName = process.env.SQL_DB_NAME || "postgres";
-  const sqlPort = process.env.SQL_PORT ? parseInt(process.env.SQL_PORT) : 5432;
-  const isSsl = process.env.SQL_SSL === "true" || (sqlHost ? sqlHost.includes("supabase") : false);
-  if (!sqlHost || !sqlPassword) {
-    console.warn("\u26A0\uFE0F Warning: PostgreSQL environment variables (SQL_HOST, SQL_PASSWORD) are not set. Please configure them in your environment settings.");
-  }
+  const sqlPort = process.env.SQL_PORT ? parseInt(process.env.SQL_PORT) : 6543;
+  const isSsl = process.env.SQL_SSL === "true" || true;
+  console.log(`Connecting PostgreSQL pool to host: ${sqlHost}:${sqlPort} (User: ${sqlUser})`);
   return new Pool2({
     host: sqlHost,
     port: sqlPort,
