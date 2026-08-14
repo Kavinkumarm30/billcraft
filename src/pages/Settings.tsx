@@ -9,7 +9,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Loader2, 
   Palette, 
-  Type, 
   LayoutTemplate, 
   Building2, 
   Check, 
@@ -27,9 +26,13 @@ import {
   Layers,
   Upload,
   FileCode,
-  X
+  X,
+  FileUp,
+  Clock,
+  ExternalLink,
+  ShieldCheck
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Dialog, DialogContent } from '../components/ui/dialog';
 
 export interface CanvasElement {
   id: string;
@@ -188,109 +191,27 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
   ]
 };
 
-const prebuiltCanvaTemplates = [
-  {
-    name: 'Standard Modern',
-    badge: 'Logo Left',
-    desc: 'Clean aesthetics with soft borders & spacious items table',
-    color: '#18181b',
-    design: defaultCanvaDesign
-  },
-  {
-    name: 'Executive Dark Slate',
-    badge: 'Dark Accent',
-    desc: 'High contrast solid dark header with highlighted grand total',
-    color: '#0f172a',
-    design: {
-      canvasBg: '#ffffff',
-      primaryColor: '#0f172a',
-      fontFamily: 'sans' as const,
-      canvasHeight: 1050,
-      elements: [
-        { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 420 },
-        { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#0f172a' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, bgColor: '#f8fafc', borderColor: '#cbd5e1' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720 },
-        { ...defaultCanvaDesign.elements[4], x: 470, y: 540, width: 290, bgColor: '#0f172a', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#f8fafc' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 530, y: 690, width: 230 },
-      ]
-    }
-  },
-  {
-    name: 'Orange Classic',
-    badge: 'Custom Template',
-    desc: 'Warm orange tones with classic serif typography and boxed cards',
-    color: '#ea580c',
-    design: {
-      canvasBg: '#ffffff',
-      primaryColor: '#ea580c',
-      fontFamily: 'serif' as const,
-      canvasHeight: 1050,
-      elements: [
-        { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#ea580c' },
-        { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#ea580c' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, borderColor: '#fdba74', bgColor: '#fff7ed' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720, borderColor: '#ea580c' },
-        { ...defaultCanvaDesign.elements[4], x: 480, y: 540, width: 280, bgColor: '#ea580c', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#fff7ed', borderColor: '#fdba74' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 520, y: 690, width: 240 },
-      ]
-    }
-  },
-  {
-    name: 'Emerald Fresh',
-    badge: 'Centered',
-    desc: 'Botanical green accents with centered company branding',
-    color: '#059669',
-    design: {
-      canvasBg: '#ffffff',
-      primaryColor: '#059669',
-      fontFamily: 'sans' as const,
-      canvasHeight: 1050,
-      elements: [
-        { ...defaultCanvaDesign.elements[0], x: 200, y: 35, width: 400, textAlign: 'center' as const },
-        { ...defaultCanvaDesign.elements[1], x: 200, y: 140, width: 400, textAlign: 'center' as const },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 230, width: 720, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 360, width: 720 },
-        { ...defaultCanvaDesign.elements[4], x: 480, y: 600, width: 280, bgColor: '#059669', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 600, width: 410, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 740, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 520, y: 740, width: 240 },
-      ]
-    }
-  },
-  {
-    name: 'Corporate Royal',
-    badge: 'Professional',
-    desc: 'Prestigious blue theme with spacious table and boxed bank box',
-    color: '#2563eb',
-    design: {
-      canvasBg: '#ffffff',
-      primaryColor: '#2563eb',
-      fontFamily: 'sans' as const,
-      canvasHeight: 1050,
-      elements: [
-        { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#2563eb' },
-        { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#2563eb' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720 },
-        { ...defaultCanvaDesign.elements[4], x: 480, y: 540, width: 280, bgColor: '#2563eb', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 520, y: 690, width: 240 },
-      ]
-    }
-  }
+// Predefined Prebuilt Standard Invoice Layouts
+const predefinedLayouts = [
+  { id: 'standard', name: 'Standard', badge: 'Logo Left', desc: 'Classic business invoice with company details on the left' },
+  { id: 'modern', name: 'Modern', badge: 'Logo Right', desc: 'Contemporary layout with brand logo on the right side' },
+  { id: 'minimal', name: 'Minimal', badge: 'Centered', desc: 'Clean centered typography with slim divider lines' },
+  { id: 'professional', name: 'Professional', badge: 'Boxed', desc: 'Card containers for customer details and totals' },
+  { id: 'bold', name: 'Bold', badge: 'Dark Accent', desc: 'Dark solid header with high contrast summary values' },
+  { id: 'elegant', name: 'Elegant', badge: 'Serif & Soft', desc: 'Timeless serif fonts with soft rounded borders' },
+  { id: 'tech', name: 'Tech', badge: 'Monospace', desc: 'Clean monospace typography for tech companies' },
+  { id: 'corporate', name: 'Corporate', badge: 'Solid Header', desc: 'Formal executive layout designed for corporate billing' },
+  { id: 'playful', name: 'Playful', badge: 'Rounded', desc: 'Vibrant rounded cards with colorful badges' },
+  { id: 'orange-classic', name: 'Orange Classic', badge: 'Custom Monisha', desc: 'Exclusive warm orange boxed theme with highlighted totals card', isCustom: true },
+  { id: 'classic', name: 'Classic', badge: 'Traditional', desc: 'Traditional paper invoice layout with standard grid' },
 ];
 
 export default function Settings() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'canva' | 'profile'>('canva');
+  // 3 Distinct Main Pages inside Settings
+  const [activeTab, setActiveTab] = useState<'upload' | 'canva' | 'details'>('upload');
   
   // Organization profile states
   const [companyName, setCompanyName] = useState('');
@@ -303,21 +224,22 @@ export default function Settings() {
   const [accountNo, setAccountNo] = useState('');
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [selectedLayoutId, setSelectedLayoutId] = useState('standard');
 
   // Canva Designer state
   const [design, setDesign] = useState<CanvaLayoutDesign>(defaultCanvaDesign);
   const [selectedElementId, setSelectedElementId] = useState<string | null>('company_header');
   const [zoomLevel, setZoomLevel] = useState<number>(0.85);
-  const [sidebarPanel, setSidebarPanel] = useState<'templates' | 'elements' | 'styles'>('templates');
+  const [sidebarPanel, setSidebarPanel] = useState<'elements' | 'styles'>('elements');
 
-  // Custom layout request modal
-  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  // Upload Custom Bill state
   const [customFile, setCustomFile] = useState<File | null>(null);
   const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
   const [customNote, setCustomNote] = useState('');
   const [isSubmittingCustom, setIsSubmittingCustom] = useState(false);
+  const [fullPreviewUrl, setFullPreviewUrl] = useState<string | null>(null);
 
-  // Dragging state
+  // Dragging state for Canva
   const canvasRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const isResizingRef = useRef(false);
@@ -367,7 +289,7 @@ export default function Settings() {
       setIfsc(settings.ifsc || '');
       setUpiId(settings.upiId || '');
 
-      // Load Canva design if saved
+      // Load Canva design or predefined layout
       if (settings.invoiceLayout) {
         try {
           if (settings.invoiceLayout.startsWith('{')) {
@@ -375,6 +297,8 @@ export default function Settings() {
             if (parsed.elements && Array.isArray(parsed.elements)) {
               setDesign(parsed);
             }
+          } else {
+            setSelectedLayoutId(settings.invoiceLayout);
           }
         } catch (e) {
           console.error("Error parsing design:", e);
@@ -399,14 +323,14 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast.success('Canva layout & settings saved successfully!');
+      toast.success('Settings & invoice layout saved successfully!');
     },
     onError: (err: any) => {
       toast.error(err.message || 'Failed to update settings');
     }
   });
 
-  const handleSaveDesign = () => {
+  const handleSaveProfileAndLayout = (layoutToSave?: string) => {
     const payload = {
       companyName,
       email,
@@ -418,7 +342,7 @@ export default function Settings() {
       accountNo,
       ifsc,
       upiId,
-      invoiceLayout: JSON.stringify(design),
+      invoiceLayout: layoutToSave || (activeTab === 'canva' ? JSON.stringify(design) : selectedLayoutId),
     };
     mutation.mutate(payload);
   };
@@ -426,7 +350,7 @@ export default function Settings() {
   // Submit custom template request for team review
   const handleSubmitCustomRequest = async () => {
     if (!customFile) {
-      toast.error('Please select an invoice design or photo to upload');
+      toast.error('Please select your bill image or PDF to upload');
       return;
     }
 
@@ -447,8 +371,7 @@ export default function Settings() {
 
       if (!res.ok) throw new Error('Failed to submit design request');
 
-      toast.success('Custom design submitted! Our team will review it and grant you access.');
-      setIsCustomModalOpen(false);
+      toast.success('Custom bill submitted! Our team will craft your layout and grant access.');
       setCustomFile(null);
       setCustomFilePreview(null);
       setCustomNote('');
@@ -460,7 +383,7 @@ export default function Settings() {
     }
   };
 
-  // Drag and drop event handlers
+  // Canva Drag and Drop event handlers
   const handlePointerDown = (e: React.PointerEvent, elementId: string, isResizeHandle: boolean = false) => {
     e.stopPropagation();
     setSelectedElementId(elementId);
@@ -546,7 +469,7 @@ export default function Settings() {
         { ...prev.elements[7], x: 520, y: 690, width: 240, textAlign: 'center' },
       ]
     }));
-    toast.success('✨ Auto-Aligned all bill sections with perfect professional spacing!');
+    toast.success('✨ Auto-Aligned all bill sections with perfect spacing!');
   };
 
   // Center Element Horizontally
@@ -571,47 +494,70 @@ export default function Settings() {
 
   return (
     <div className="space-y-4 max-w-full">
-      {/* Top Navigation Bar */}
+      
+      {/* Top Main Navigation Header with 3 Pages */}
       <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs">
-              STUDIO
+            <span className="px-3 py-1 rounded-full text-xs font-black bg-black text-white shadow-xs">
+              BILL-CRAFT
             </span>
             <h1 className="text-xl font-black text-gray-900 tracking-tight">Organization & Bill Settings</h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Customize invoice layout, organization profile, and custom template requests
+            Upload custom layouts, edit bills with Canva studio, or manage company profile & presets
           </p>
         </div>
 
+        {/* 3 Main Tabs */}
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex bg-gray-100 p-1 rounded-xl">
+            {/* Page 1: Upload the Bill */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('upload')}
+              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                activeTab === 'upload' 
+                  ? 'bg-amber-500 text-white shadow-sm' 
+                  : 'text-gray-600 hover:text-black'
+              }`}
+            >
+              <FileUp className="w-3.5 h-3.5" />
+              Upload the Bill
+            </button>
+
+            {/* Page 2: Canva Editor */}
             <button
               type="button"
               onClick={() => setActiveTab('canva')}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'canva' ? 'bg-white text-black shadow-xs' : 'text-gray-600 hover:text-black'
+              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                activeTab === 'canva' 
+                  ? 'bg-purple-600 text-white shadow-sm' 
+                  : 'text-gray-600 hover:text-black'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 inline-block mr-1 text-purple-600" />
-              Canva Customizer
+              <Sparkles className="w-3.5 h-3.5" />
+              Canva Editor
             </button>
+
+            {/* Page 3: Company Details & Predefined Layouts */}
             <button
               type="button"
-              onClick={() => setActiveTab('profile')}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'profile' ? 'bg-white text-black shadow-xs' : 'text-gray-600 hover:text-black'
+              onClick={() => setActiveTab('details')}
+              className={`px-3.5 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                activeTab === 'details' 
+                  ? 'bg-blue-600 text-white shadow-sm' 
+                  : 'text-gray-600 hover:text-black'
               }`}
             >
-              <Building2 className="w-3.5 h-3.5 inline-block mr-1 text-blue-600" />
-              Company Details
+              <Building2 className="w-3.5 h-3.5" />
+              Company Details (Predefined Layouts)
             </button>
           </div>
 
           {activeTab === 'canva' && (
             <Button 
-              onClick={handleSaveDesign} 
+              onClick={() => handleSaveProfileAndLayout(JSON.stringify(design))} 
               disabled={mutation.isPending} 
               className="bg-black hover:bg-gray-800 text-white text-xs font-bold px-5 h-9 shadow-md transition-transform active:scale-95"
             >
@@ -622,7 +568,207 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* TAB 1: CANVA STUDIO CUSTOMIZER */}
+      {/* ========================================================================= */}
+      {/* PAGE 1: UPLOAD THE BILL (CUSTOM BILL LAYOUT SUBMISSION & STATUS)           */}
+      {/* ========================================================================= */}
+      {activeTab === 'upload' && (
+        <div className="space-y-6 max-w-5xl">
+          
+          {/* Main Upload Card */}
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50/60 border-b border-amber-100 p-6">
+              <div className="flex items-start gap-3.5">
+                <div className="p-3 bg-amber-100 text-amber-800 rounded-2xl shrink-0">
+                  <FileCode className="w-6 h-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black text-amber-950">
+                    Have your own custom bill layout?
+                  </CardTitle>
+                  <CardDescription className="text-xs text-amber-800/90 mt-1">
+                    Upload your existing bill, invoice, or receipt format. Our team will review the design, build the pixel-perfect layout, and grant access specifically to your account!
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-6 space-y-6">
+              
+              {/* Drag and drop upload zone */}
+              <div>
+                <Label className="text-xs font-bold text-gray-700 uppercase tracking-wider block mb-2">
+                  1. Select Bill Image or PDF
+                </Label>
+                
+                {!customFilePreview ? (
+                  <label 
+                    htmlFor="fullBillUploadInput"
+                    className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/30 hover:bg-amber-50/60 transition-all rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer text-center group"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-3 group-hover:scale-110 transition-transform shadow-xs">
+                      <Upload className="w-7 h-7" />
+                    </div>
+                    <p className="text-sm font-bold text-gray-900">
+                      Click to upload or drag & drop your bill format
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Support for JPG, PNG, JPEG, and PDF documents (up to 15MB)
+                    </p>
+                    <input 
+                      type="file" 
+                      id="fullBillUploadInput" 
+                      accept="image/*,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCustomFile(file);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setCustomFilePreview(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="p-4 bg-gray-50 border rounded-2xl flex flex-col sm:flex-row items-center gap-4">
+                    <div className="w-40 h-40 bg-white rounded-xl border flex items-center justify-center overflow-hidden shrink-0 shadow-xs relative">
+                      <img src={customFilePreview} alt="Bill Preview" className="max-h-full object-contain" />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-gray-900">{customFile?.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomFile(null);
+                            setCustomFilePreview(null);
+                          }}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Remove file"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Size: {(customFile ? customFile.size / (1024 * 1024) : 0).toFixed(2)} MB
+                      </p>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">
+                        <Check className="w-3.5 h-3.5" /> File Attached Ready to Submit
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Special Instructions */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  2. Special Formatting Notes or Requirements (Optional)
+                </Label>
+                <textarea
+                  rows={3}
+                  value={customNote}
+                  onChange={(e) => setCustomNote(e.target.value)}
+                  placeholder="e.g. Please put our logo on the top center, add a GST tax summary table, and include terms at the bottom."
+                  className="w-full text-xs p-3 border rounded-xl bg-white focus:ring-1 focus:ring-black outline-none"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2 flex justify-end">
+                <Button
+                  type="button"
+                  onClick={handleSubmitCustomRequest}
+                  disabled={!customFile || isSubmittingCustom}
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-10 px-6 shadow-md transition-transform active:scale-95"
+                >
+                  {isSubmittingCustom ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting Request...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Submit Bill Layout to Our Team
+                    </>
+                  )}
+                </Button>
+              </div>
+
+            </CardContent>
+          </Card>
+
+          {/* User's Previous Layout Requests Tracker */}
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  Your Custom Bill Requests & Access Status
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Track the status of your submitted layouts
+                </CardDescription>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
+                {customRequests?.length || 0} Submissions
+              </span>
+            </CardHeader>
+            <CardContent className="p-4 space-y-3">
+              {customRequests && customRequests.length > 0 ? (
+                customRequests.map((req: any) => (
+                  <div key={req.id} className="p-4 rounded-xl border border-gray-200 bg-white hover:shadow-xs transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div 
+                        className="w-16 h-16 rounded-lg bg-gray-50 border flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 shrink-0"
+                        onClick={() => setFullPreviewUrl(req.fileUrl)}
+                      >
+                        <img src={req.fileUrl} alt="Bill Preview" className="max-h-full object-contain" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-900">{req.note || 'Custom Bill Layout Request'}</p>
+                        <p className="text-[11px] text-gray-400 font-mono mt-0.5">
+                          Submitted: {new Date(req.submittedAt).toLocaleDateString()} at {new Date(req.submittedAt).toLocaleTimeString()}
+                        </p>
+                        {req.status === 'APPROVED' && (
+                          <p className="text-[11px] text-green-700 font-bold mt-1 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Layout crafted & granted by Admin. Check Predefined Layouts!
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                        req.status === 'APPROVED' ? 'bg-green-100 text-green-800 border border-green-200' :
+                        req.status === 'REJECTED' ? 'bg-red-100 text-red-800 border border-red-200' :
+                        'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}>
+                        {req.status === 'APPROVED' ? '🟢 ACCESS GRANTED' :
+                         req.status === 'REJECTED' ? '🔴 NEEDS REVISION' :
+                         '🟡 UNDER REVIEW'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-gray-500 text-xs">
+                  No custom bill requests submitted yet. Use the uploader above to submit your bill!
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PAGE 2: CANVA EDITOR (FREEFORM DRAG & DROP CUSTOMIZER)                    */}
+      {/* ========================================================================= */}
       {activeTab === 'canva' && (
         <div className="flex flex-col lg:flex-row h-[calc(100vh-135px)] min-h-[720px] border border-gray-200 bg-gray-100 rounded-2xl overflow-hidden shadow-sm">
           
@@ -630,16 +776,6 @@ export default function Settings() {
           <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col shrink-0">
             {/* Sidebar Navigation */}
             <div className="flex border-b border-gray-100 bg-gray-50/80 p-1.5 gap-1">
-              <button
-                type="button"
-                onClick={() => setSidebarPanel('templates')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  sidebarPanel === 'templates' ? 'bg-white text-purple-700 shadow-xs' : 'text-gray-500 hover:text-black'
-                }`}
-              >
-                <LayoutTemplate className="w-3.5 h-3.5" />
-                Templates
-              </button>
               <button
                 type="button"
                 onClick={() => setSidebarPanel('elements')}
@@ -658,113 +794,14 @@ export default function Settings() {
                 }`}
               >
                 <Palette className="w-3.5 h-3.5" />
-                Themes
+                Colors & Themes
               </button>
             </div>
 
             {/* Sidebar Panel Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               
-              {/* 1. TEMPLATES & CUSTOM TEMPLATE REQUEST PANEL */}
-              {sidebarPanel === 'templates' && (
-                <div className="space-y-4">
-                  {/* Custom Bill Layout Upload Section */}
-                  <div className="p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/40 space-y-2.5">
-                    <div className="flex items-start gap-2.5">
-                      <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0 mt-0.5">
-                        <FileCode className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-black text-amber-950">Have a custom bill layout?</h4>
-                        <p className="text-[11px] text-amber-800 leading-tight mt-0.5">
-                          Upload your design, and our team will review it and grant you access.
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      type="button"
-                      onClick={() => setIsCustomModalOpen(true)}
-                      className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8 shadow-xs"
-                    >
-                      <Upload className="w-3.5 h-3.5 mr-1.5" />
-                      Upload Custom Design
-                    </Button>
-
-                    {/* Show Submitted Requests if any */}
-                    {customRequests && customRequests.length > 0 && (
-                      <div className="pt-2 border-t border-amber-200/60 space-y-1.5">
-                        <p className="text-[10px] font-bold text-amber-900 uppercase tracking-wider">Your Requests</p>
-                        {customRequests.map((req: any) => (
-                          <div key={req.id} className="p-2 bg-white rounded-lg border border-amber-200 flex items-center justify-between text-[11px]">
-                            <span className="font-semibold text-gray-700 truncate max-w-[120px]">
-                              {req.note || 'Custom Design'}
-                            </span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              req.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                              req.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                              'bg-amber-100 text-amber-800'
-                            }`}>
-                              {req.status}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* If user has been granted custom layout access by Admin */}
-                  {settings?.hasCustomLayoutAccess && (
-                    <div className="p-3 rounded-xl border border-green-300 bg-green-50/80 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-green-950 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
-                          Custom Layout Active
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-200 text-green-800">
-                          ACCESS GRANTED
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-green-800">
-                        Admin has crafted and unlocked your organization's custom bill format.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Layout Presets</p>
-                      <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">Ready to Use</span>
-                    </div>
-
-                    {prebuiltCanvaTemplates.map((t, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setDesign(t.design);
-                          toast.success(`Applied "${t.name}"! You can drag elements around to customize further.`);
-                        }}
-                        className="group p-3 rounded-xl border border-gray-200 hover:border-purple-600 cursor-pointer bg-white transition-all hover:shadow-md relative overflow-hidden"
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-black text-gray-900 group-hover:text-purple-600 transition-colors">
-                            {t.name}
-                          </span>
-                          <span 
-                            className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
-                            style={{ backgroundColor: t.color }}
-                          >
-                            {t.badge}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-gray-500 leading-tight">{t.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 2. ELEMENTS PANEL */}
+              {/* 1. ELEMENTS PANEL */}
               {sidebarPanel === 'elements' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -815,7 +852,7 @@ export default function Settings() {
                 </div>
               )}
 
-              {/* 3. THEMES & STYLES PANEL */}
+              {/* 2. THEMES & STYLES PANEL */}
               {sidebarPanel === 'styles' && (
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -1228,247 +1265,244 @@ export default function Settings() {
         </div>
       )}
 
-      {/* TAB 2: COMPANY PROFILE */}
-      {activeTab === 'profile' && (
-        <Card className="border-0 shadow-sm ring-1 ring-gray-100 max-w-3xl">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-            <CardTitle className="text-lg">Organization Profile</CardTitle>
-            <CardDescription>This information will appear automatically on your generated invoices</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Company Name *</Label>
-                <Input 
-                  value={companyName} 
-                  onChange={(e) => setCompanyName(e.target.value)} 
-                  placeholder="Your Business Name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  placeholder="billing@yourcompany.com"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Phone Number</Label>
-                <Input 
-                  value={phone} 
-                  onChange={(e) => setPhone(e.target.value)} 
-                  placeholder="+91 9876543210"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>GST / Tax Number</Label>
-                <Input 
-                  value={gstNo} 
-                  onChange={(e) => setGstNo(e.target.value)} 
-                  placeholder="33AAAAA0000A1Z5"
-                />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Business Address</Label>
-                <Input 
-                  value={address} 
-                  onChange={(e) => setAddress(e.target.value)} 
-                  placeholder="Street, City, State, PIN"
-                />
-              </div>
-
-              {/* Bank Details */}
-              <div className="space-y-2 sm:col-span-2 pt-2 border-t border-gray-100">
-                <h4 className="text-sm font-semibold text-gray-900">Bank & Payment Information (Optional)</h4>
-              </div>
-              <div className="space-y-2">
-                <Label>Bank Name</Label>
-                <Input 
-                  value={bankName} 
-                  onChange={(e) => setBankName(e.target.value)} 
-                  placeholder="State Bank of India"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Account Number</Label>
-                <Input 
-                  value={accountNo} 
-                  onChange={(e) => setAccountNo(e.target.value)} 
-                  placeholder="123456789012"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>IFSC Code</Label>
-                <Input 
-                  value={ifsc} 
-                  onChange={(e) => setIfsc(e.target.value)} 
-                  placeholder="SBIN0001234"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>UPI ID</Label>
-                <Input 
-                  value={upiId} 
-                  onChange={(e) => setUpiId(e.target.value)} 
-                  placeholder="business@upi"
-                />
-              </div>
-
-              {/* Logo Upload */}
-              <div className="space-y-2 sm:col-span-2 pt-2 border-t border-gray-100">
-                <Label>Company Logo</Label>
-                <Input 
-                  type="file" 
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setLogoUrl(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }} 
-                />
-                {logoUrl && (
-                  <div className="mt-2 h-16 w-32 relative border rounded-lg p-2 bg-gray-50 flex items-center justify-center">
-                    <img src={logoUrl} alt="Logo preview" className="object-contain max-h-full max-w-full" />
-                  </div>
+      {/* ========================================================================= */}
+      {/* PAGE 3: COMPANY DETAILS (PREDEFINED LAYOUTS GALLERY & ORG PROFILE)         */}
+      {/* ========================================================================= */}
+      {activeTab === 'details' && (
+        <div className="space-y-6 max-w-5xl">
+          
+          {/* Predefined Invoice Layouts Selection Gallery */}
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-blue-600" />
+                    Predefined Invoice Layouts
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Choose from our curated 1-click professional bill templates
+                  </CardDescription>
+                </div>
+                {settings?.hasCustomLayoutAccess && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                    <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
+                    Custom Layout Unlocked
+                  </span>
                 )}
               </div>
-            </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                {predefinedLayouts.map((layout) => {
+                  const isSelected = selectedLayoutId === layout.id;
+                  const isCustomUnlocked = layout.isCustom && settings?.hasCustomLayoutAccess;
+                  const isCustomLocked = layout.isCustom && !settings?.hasCustomLayoutAccess;
 
-            <div className="pt-4 flex justify-end border-t border-gray-100">
-              <Button 
-                onClick={handleSaveDesign} 
-                disabled={mutation.isPending} 
-                className="bg-black hover:bg-gray-800 text-white"
-              >
-                {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Company Profile
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                  return (
+                    <div
+                      key={layout.id}
+                      onClick={() => {
+                        if (isCustomLocked) {
+                          toast.error('Orange Classic is a custom layout. Upload your bill design under "Upload the Bill" tab to request access!');
+                          return;
+                        }
+                        setSelectedLayoutId(layout.id);
+                        handleSaveProfileAndLayout(layout.id);
+                        toast.success(`Selected "${layout.name}" layout for all your bills!`);
+                      }}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                        isSelected 
+                          ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-600 shadow-sm' 
+                          : isCustomLocked 
+                            ? 'border-gray-200 bg-gray-50/70 opacity-70 hover:opacity-100' 
+                            : 'border-gray-200 bg-white hover:border-blue-400 hover:shadow-xs'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-bold text-xs text-gray-900">{layout.name}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            layout.isCustom 
+                              ? isCustomUnlocked ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {layout.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 leading-snug">{layout.desc}</p>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+                        {isSelected ? (
+                          <span className="text-[11px] font-bold text-blue-600 flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" /> Active Layout
+                          </span>
+                        ) : isCustomLocked ? (
+                          <span className="text-[10px] font-bold text-amber-600">
+                            Upload bill to unlock
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-gray-400">
+                            Click to activate
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Organization Profile Form */}
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100">
+              <CardTitle className="text-base font-bold text-gray-900">Organization Profile & Business Details</CardTitle>
+              <CardDescription className="text-xs">This information will automatically populate on your invoices and receipts</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Company / Business Name *</Label>
+                  <Input 
+                    value={companyName} 
+                    onChange={(e) => setCompanyName(e.target.value)} 
+                    placeholder="Your Business Name"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Email Address</Label>
+                  <Input 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="billing@yourcompany.com"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Phone Number</Label>
+                  <Input 
+                    value={phone} 
+                    onChange={(e) => setPhone(e.target.value)} 
+                    placeholder="+91 9876543210"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">GST / Tax Identification Number</Label>
+                  <Input 
+                    value={gstNo} 
+                    onChange={(e) => setGstNo(e.target.value)} 
+                    placeholder="33AAAAA0000A1Z5"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label className="text-xs font-bold text-gray-700">Business Address</Label>
+                  <Input 
+                    value={address} 
+                    onChange={(e) => setAddress(e.target.value)} 
+                    placeholder="Street, City, State, PIN"
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                {/* Bank Details */}
+                <div className="space-y-2 sm:col-span-2 pt-2 border-t border-gray-100">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">Bank & Payment Information (Optional)</h4>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Bank Name</Label>
+                  <Input 
+                    value={bankName} 
+                    onChange={(e) => setBankName(e.target.value)} 
+                    placeholder="State Bank of India"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">Account Number</Label>
+                  <Input 
+                    value={accountNo} 
+                    onChange={(e) => setAccountNo(e.target.value)} 
+                    placeholder="123456789012"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">IFSC Code</Label>
+                  <Input 
+                    value={ifsc} 
+                    onChange={(e) => setIfsc(e.target.value)} 
+                    placeholder="SBIN0001234"
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-gray-700">UPI ID</Label>
+                  <Input 
+                    value={upiId} 
+                    onChange={(e) => setUpiId(e.target.value)} 
+                    placeholder="business@upi"
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                {/* Logo Upload */}
+                <div className="space-y-2 sm:col-span-2 pt-2 border-t border-gray-100">
+                  <Label className="text-xs font-bold text-gray-700">Company Logo</Label>
+                  <Input 
+                    type="file" 
+                    accept="image/*"
+                    className="h-9 text-xs"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setLogoUrl(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                  />
+                  {logoUrl && (
+                    <div className="mt-2 h-16 w-32 relative border rounded-lg p-2 bg-gray-50 flex items-center justify-center">
+                      <img src={logoUrl} alt="Logo preview" className="object-contain max-h-full max-w-full" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end border-t border-gray-100">
+                <Button 
+                  onClick={() => handleSaveProfileAndLayout()} 
+                  disabled={mutation.isPending} 
+                  className="bg-black hover:bg-gray-800 text-white font-bold text-xs h-9 px-6 shadow-sm"
+                >
+                  {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Company Profile
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+        </div>
       )}
 
-      {/* Upload Custom Design Request Modal */}
-      <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
-                <FileCode className="w-5 h-5" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-bold text-gray-900">
-                  Upload Custom Bill Layout
-                </DialogTitle>
-                <DialogDescription className="text-xs text-gray-500">
-                  Upload your design file and our team will review it and grant access
-                </DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {!customFilePreview ? (
-              <label 
-                htmlFor="customTemplateUploadInput" 
-                className="border-2 border-dashed border-amber-200 hover:border-amber-500 bg-amber-50/40 hover:bg-amber-50/70 transition-all rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer text-center group"
-              >
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-2 group-hover:scale-110 transition-transform">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <p className="text-xs font-bold text-gray-800">
-                  Upload your bill layout design / screenshot
-                </p>
-                <p className="text-[11px] text-gray-500 mt-0.5">
-                  PNG, JPG, or PDF format
-                </p>
-                <input 
-                  type="file" 
-                  id="customTemplateUploadInput" 
-                  accept="image/*,.pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setCustomFile(file);
-                      const reader = new FileReader();
-                      reader.onloadend = () => {
-                        setCustomFilePreview(reader.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-              </label>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative border rounded-xl overflow-hidden bg-gray-900 flex justify-center max-h-[220px]">
-                  <img src={customFilePreview} alt="Preview" className="max-h-[220px] object-contain" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCustomFile(null);
-                      setCustomFilePreview(null);
-                    }}
-                    className="absolute top-2 right-2 p-1 bg-black/70 hover:bg-black text-white rounded-full transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-[11px] text-center text-gray-500 font-medium">
-                  {customFile?.name} ({(customFile ? customFile.size / (1024 * 1024) : 0).toFixed(2)} MB)
-                </p>
-              </div>
+      {/* Full Image Preview Modal */}
+      <Dialog open={!!fullPreviewUrl} onOpenChange={() => setFullPreviewUrl(null)}>
+        <DialogContent className="max-w-3xl p-2 bg-black/90">
+          <div className="flex justify-center p-4">
+            {fullPreviewUrl && (
+              <img src={fullPreviewUrl} alt="Full Bill Preview" className="max-h-[80vh] object-contain rounded" />
             )}
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-gray-700">Special Notes or Instructions</Label>
-              <Input
-                value={customNote}
-                onChange={(e) => setCustomNote(e.target.value)}
-                placeholder="e.g. Please add our custom header banner and tax columns"
-                className="h-9 text-xs"
-              />
-            </div>
           </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsCustomModalOpen(false);
-                setCustomFile(null);
-                setCustomFilePreview(null);
-              }}
-              disabled={isSubmittingCustom}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleSubmitCustomRequest}
-              disabled={!customFile || isSubmittingCustom}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
-            >
-              {isSubmittingCustom ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit for Team Review'
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }
