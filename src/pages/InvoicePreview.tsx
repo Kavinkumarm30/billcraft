@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '../components/ui/button';
-import { Printer, Download, Save, ArrowLeft, Building2, Share2, CheckCircle, Image as ImageIcon } from 'lucide-react';
+import { Printer, Download, Save, ArrowLeft, Building2, Share2, CheckCircle, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomMonishaLayout } from '../pages/CustomMonishaLayout';
-import { defaultLayoutConfig, LayoutConfig } from '../pages/Settings';
+import { CanvaLayoutDesign, defaultCanvaDesign } from '../pages/Settings';
 
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
@@ -247,24 +247,19 @@ export default function InvoicePreview() {
 
   if (!data) return null;
 
-  // Parse user's custom layout config
-  let layoutConfig: LayoutConfig = defaultLayoutConfig;
+  // Parse user's Canva layout config
+  let canvaDesign: CanvaLayoutDesign = defaultCanvaDesign;
   const rawLayout = settings?.invoiceLayout || 'standard';
 
   if (rawLayout.startsWith('{')) {
     try {
-      layoutConfig = { ...defaultLayoutConfig, ...JSON.parse(rawLayout) };
+      const parsed = JSON.parse(rawLayout);
+      if (parsed.elements && Array.isArray(parsed.elements)) {
+        canvaDesign = parsed;
+      }
     } catch (e) {
       console.error(e);
     }
-  } else if (rawLayout === 'orange-classic') {
-    layoutConfig = {
-      ...defaultLayoutConfig,
-      primaryColor: '#ea580c',
-      fontFamily: 'serif',
-      borderStyle: 'double',
-      tableHeaderStyle: 'accent'
-    };
   }
 
   const isCustomMonisha = rawLayout === 'orange-classic';
@@ -313,7 +308,7 @@ export default function InvoicePreview() {
           style={{ 
             transform: `scale(${scale})`, 
             transformOrigin: 'top left',
-            marginBottom: scale < 1 ? `-${1131 * (1 - scale)}px` : '0',
+            marginBottom: scale < 1 ? `-${(canvaDesign.canvasHeight || 1050) * (1 - scale)}px` : '0',
             width: '800px',
             marginLeft: scale < 1 ? `calc(50% - ${800 * scale / 2}px)` : 'auto',
             marginRight: scale < 1 ? '0' : 'auto'
@@ -322,229 +317,189 @@ export default function InvoicePreview() {
         >
           <div 
             ref={invoiceRef}
-            className={`bg-white p-8 sm:p-12 w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 ${
-              layoutConfig.fontFamily === 'serif' ? 'font-serif' : 
-              layoutConfig.fontFamily === 'mono' ? 'font-mono' : 'font-sans'
-            } ${
-              layoutConfig.borderStyle === 'double' ? 'border-[3px] border-double shadow-sm' : 
-              layoutConfig.borderStyle === 'rounded' ? 'border-2 rounded-2xl shadow-sm' : 
-              layoutConfig.borderStyle === 'clean' ? 'border-0 shadow-none' : 'border shadow-sm'
+            style={{
+              width: '800px',
+              minHeight: `${canvaDesign.canvasHeight || 1050}px`,
+              backgroundColor: canvaDesign.canvasBg || '#ffffff'
+            }}
+            className={`relative bg-white shadow-sm border border-gray-200 print:border-none print:shadow-none print:p-0 print:m-0 ${
+              canvaDesign.fontFamily === 'serif' ? 'font-serif' : 
+              canvaDesign.fontFamily === 'mono' ? 'font-mono' : 'font-sans'
             }`}
-            style={{ borderColor: layoutConfig.primaryColor }}
           >
             {isCustomMonisha ? (
               <CustomMonishaLayout data={data} settings={settings} />
             ) : (
               <>
-                {/* Dynamically Rendered Sections according to Customizer Order */}
-                {layoutConfig.sectionOrder.map((sectionId) => {
-                  
-                  // SECTION 1: HEADER
-                  if (sectionId === 'header') {
-                    return (
-                      <div 
-                        key="header"
-                        className={`pb-8 mb-8 border-b flex ${
-                          layoutConfig.headerAlignment === 'center' ? 'flex-col items-center text-center gap-4' :
-                          layoutConfig.headerAlignment === 'right' ? 'flex-row-reverse justify-between text-right' :
-                          layoutConfig.headerAlignment === 'left' ? 'flex-col items-start gap-4' :
-                          'justify-between items-start'
-                        }`}
-                        style={{ borderColor: layoutConfig.primaryColor + '30' }}
-                      >
-                        {/* Company Details */}
-                        <div className={`flex items-center gap-4 ${layoutConfig.headerAlignment === 'center' ? 'flex-col' : ''}`}>
-                          {layoutConfig.showLogo && (
-                            settings?.logoUrl ? (
-                              <img src={settings.logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-lg" />
-                            ) : (
-                              <div 
-                                className="h-14 w-14 rounded-xl flex items-center justify-center text-white shadow-sm font-bold text-lg"
-                                style={{ backgroundColor: layoutConfig.primaryColor }}
-                              >
-                                {settings?.companyName ? settings.companyName.slice(0, 2).toUpperCase() : <Building2 className="h-7 w-7" />}
-                              </div>
-                            )
+                {/* Render All Canva Placed Elements */}
+                {canvaDesign.elements.filter(el => el.visible).map((el) => {
+                  return (
+                    <div
+                      key={el.id}
+                      style={{
+                        position: 'absolute',
+                        left: `${el.x}px`,
+                        top: `${el.y}px`,
+                        width: `${el.width}px`,
+                        backgroundColor: el.bgColor || 'transparent',
+                        color: el.textColor || 'inherit',
+                        fontSize: el.fontSize ? `${el.fontSize}px` : undefined,
+                        borderColor: el.borderColor || 'transparent',
+                        borderWidth: el.borderWidth ? `${el.borderWidth}px` : undefined,
+                        borderRadius: el.borderRadius ? `${el.borderRadius}px` : undefined,
+                        padding: el.padding ? `${el.padding}px` : undefined,
+                        textAlign: el.textAlign || 'left',
+                      }}
+                    >
+                      {/* COMPANY HEADER */}
+                      {el.type === 'company_header' && (
+                        <div className="flex items-center gap-3">
+                          {settings?.logoUrl ? (
+                            <img src={settings.logoUrl} alt="Logo" className="h-14 w-14 object-contain rounded-lg shrink-0" />
+                          ) : (
+                            <div 
+                              className="h-14 w-14 rounded-xl flex items-center justify-center text-white shadow-sm font-bold text-lg shrink-0"
+                              style={{ backgroundColor: canvaDesign.primaryColor }}
+                            >
+                              {settings?.companyName ? settings.companyName.slice(0, 2).toUpperCase() : <Building2 className="h-7 w-7" />}
+                            </div>
                           )}
                           <div>
-                            <h1 className="text-2xl font-bold tracking-tight" style={{ color: layoutConfig.primaryColor }}>
+                            <h1 className="text-xl font-bold tracking-tight leading-tight" style={{ color: canvaDesign.primaryColor }}>
                               {settings?.companyName || 'Your Company Name'}
                             </h1>
-                            {layoutConfig.showAddress && settings?.address && (
-                              <p className="text-sm text-gray-500 mt-0.5">{settings.address}</p>
-                            )}
-                            {layoutConfig.showPhone && settings?.phone && (
-                              <p className="text-xs text-gray-500">Phone: {settings.phone}</p>
-                            )}
-                            {layoutConfig.showGst && settings?.gstNo && (
-                              <p className="text-xs font-semibold text-gray-600">GST: {settings.gstNo}</p>
-                            )}
+                            {settings?.address && <p className="text-xs text-gray-500 mt-0.5">{settings.address}</p>}
+                            {settings?.phone && <p className="text-xs text-gray-500">Phone: {settings.phone}</p>}
+                            {settings?.gstNo && <p className="text-xs font-semibold text-gray-600 mt-0.5">GST: {settings.gstNo}</p>}
                           </div>
                         </div>
+                      )}
 
-                        {/* Invoice Meta */}
-                        <div className={`space-y-1 ${layoutConfig.headerAlignment === 'center' ? 'text-center' : 'text-right'}`}>
-                          <h2 
-                            className="text-3xl font-black uppercase tracking-wider opacity-85"
-                            style={{ color: layoutConfig.primaryColor }}
-                          >
+                      {/* INVOICE META */}
+                      {el.type === 'invoice_meta' && (
+                        <div className="space-y-0.5">
+                          <h2 className="text-3xl font-black uppercase tracking-wider leading-none" style={{ color: canvaDesign.primaryColor }}>
                             INVOICE
                           </h2>
                           <p className="font-semibold text-gray-900 text-sm">
                             Invoice No: {data.invoiceNumber || Date.now().toString().slice(-6)}
                           </p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-xs text-gray-500">
                             Date: {(data.date && data.date.includes('T') ? data.date.split('T')[0] : data.date) || new Date().toISOString().split('T')[0]}
                           </p>
                           {data.status === 'PAID' ? (
-                            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 font-bold rounded-full border border-green-200 text-xs">
-                              <CheckCircle className="w-3.5 h-3.5" />
+                            <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                              <CheckCircle2 className="w-3 h-3 text-green-600" />
                               <span>PAID</span>
                             </div>
                           ) : (
-                            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-700 font-bold rounded-full border border-orange-200 text-xs">
+                            <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
                               <span>PENDING</span>
                             </div>
                           )}
                           {data.paymentMethod && (
-                            <p className="text-xs text-gray-500 mt-1">Paid via {data.paymentMethod} {data.paymentReference ? `(${data.paymentReference})` : ''}</p>
+                            <p className="text-[11px] text-gray-500 mt-0.5">Paid via {data.paymentMethod} {data.paymentReference ? `(${data.paymentReference})` : ''}</p>
                           )}
                         </div>
-                      </div>
-                    );
-                  }
+                      )}
 
-                  // SECTION 2: BILLED TO
-                  if (sectionId === 'billed_to') {
-                    return (
-                      <div key="billed_to" className="mb-8">
-                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To</h3>
-                        <div className="text-gray-900">
-                          <p className="font-bold text-lg">{data.customerName || 'Walk-in Customer'}</p>
-                          {data.address && <p className="text-sm mt-1 text-gray-600 whitespace-pre-wrap">{data.address}</p>}
-                          {data.phone && <p className="text-sm mt-0.5 text-gray-600">Phone: {data.phone}</p>}
+                      {/* BILLED TO */}
+                      {el.type === 'billed_to' && (
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Billed To</p>
+                          <p className="font-bold text-base text-gray-900">{data.customerName || 'Walk-in Customer'}</p>
+                          {data.address && <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-wrap">{data.address}</p>}
+                          {data.phone && <p className="text-xs text-gray-600 mt-0.5">Phone: {data.phone}</p>}
                         </div>
-                      </div>
-                    );
-                  }
+                      )}
 
-                  // SECTION 3: ITEMS TABLE
-                  if (sectionId === 'table') {
-                    return (
-                      <div key="table" className="mb-8">
-                        <table className="w-full text-left border-collapse">
+                      {/* ITEMS TABLE */}
+                      {el.type === 'items_table' && (
+                        <table className="w-full text-left border-collapse text-xs">
                           <thead>
-                            <tr 
-                              className="border-b"
-                              style={{
-                                backgroundColor: layoutConfig.tableHeaderStyle === 'accent' ? layoutConfig.primaryColor :
-                                                 layoutConfig.tableHeaderStyle === 'dark' ? '#18181b' :
-                                                 layoutConfig.tableHeaderStyle === 'light' ? '#f3f4f6' : 'transparent',
-                                color: (layoutConfig.tableHeaderStyle === 'accent' || layoutConfig.tableHeaderStyle === 'dark') ? '#ffffff' : '#1f2937'
-                              }}
-                            >
-                              <th className="py-2.5 px-3 font-semibold text-sm w-[50%]">Item Description</th>
-                              <th className="py-2.5 px-3 font-semibold text-sm text-center">Qty</th>
-                              <th className="py-2.5 px-3 font-semibold text-sm text-right">Rate</th>
-                              <th className="py-2.5 px-3 font-semibold text-sm text-right">Amount</th>
+                            <tr className="border-b bg-gray-50/80">
+                              <th className="py-2.5 px-3 font-bold text-gray-700 w-[50%]">Item Description</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700 text-center">Qty</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700 text-right">Rate</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700 text-right">Amount</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100 text-sm">
+                          <tbody className="divide-y divide-gray-100 text-xs">
                             {data.items?.map((item: any, i: number) => (
                               <tr key={i} className="hover:bg-gray-50/50">
                                 <td className="py-2 px-3 text-gray-800 font-medium">{item.description || '-'}</td>
                                 <td className="py-2 px-3 text-gray-600 text-center">{item.quantity} {item.unit || ''}</td>
                                 <td className="py-2 px-3 text-gray-600 text-right">₹{Number(item.rate || 0).toFixed(2)}</td>
-                                <td className="py-2 px-3 text-gray-900 font-semibold text-right">₹{Number(item.amount || 0).toFixed(2)}</td>
+                                <td className="py-2 px-3 text-gray-900 font-bold text-right">₹{Number(item.amount || 0).toFixed(2)}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
-                      </div>
-                    );
-                  }
+                      )}
 
-                  // SECTION 4: TOTALS & SUMMARY
-                  if (sectionId === 'totals') {
-                    return (
-                      <div key="totals" className="flex justify-end pt-4 mb-8 border-t border-gray-200">
-                        <div className="w-full max-w-xs space-y-2 text-sm">
+                      {/* TOTALS CARD */}
+                      {el.type === 'totals_card' && (
+                        <div className="space-y-1.5 text-xs">
                           <div className="flex justify-between text-gray-600">
-                            <span>Subtotal</span>
+                            <span>Subtotal:</span>
                             <span className="font-medium">₹{Number(data.subtotal || 0).toFixed(2)}</span>
                           </div>
                           {Number(data.discount) > 0 && (
                             <div className="flex justify-between text-gray-600">
-                              <span>Discount</span>
+                              <span>Discount:</span>
                               <span className="text-red-500 font-medium">-₹{Number(data.discount).toFixed(2)}</span>
                             </div>
                           )}
                           {Number(data.taxAmount) > 0 && (
                             <div className="flex justify-between text-gray-600">
-                              <span>Tax</span>
+                              <span>Tax:</span>
                               <span className="font-medium">₹{Number(data.taxAmount).toFixed(2)}</span>
                             </div>
                           )}
                           <div 
-                            className="flex justify-between font-bold text-lg pt-3 border-t mt-2"
-                            style={{ borderColor: layoutConfig.primaryColor, color: layoutConfig.primaryColor }}
+                            className="flex justify-between font-bold text-base pt-2 border-t mt-1"
+                            style={{ borderColor: canvaDesign.primaryColor, color: el.textColor || canvaDesign.primaryColor }}
                           >
-                            <span>Total Amount</span>
+                            <span>Total Amount:</span>
                             <span>₹{Number(data.grandTotal || 0).toFixed(2)}</span>
                           </div>
                         </div>
-                      </div>
-                    );
-                  }
+                      )}
 
-                  // SECTION 5: BANK & PAYMENT DETAILS
-                  if (sectionId === 'bank_details') {
-                    if (!layoutConfig.showBankDetails && !settings?.bankName && !settings?.upiId) return null;
-                    return (
-                      <div key="bank_details" className="p-4 rounded-xl bg-gray-50 border border-gray-200 mb-8 text-xs">
-                        <h4 className="font-bold text-gray-800 uppercase tracking-wider mb-2">Bank & Payment Information</h4>
-                        <div className="grid grid-cols-2 gap-2 text-gray-600">
-                          {settings?.bankName && <div>Bank: <span className="font-medium text-gray-900">{settings.bankName}</span></div>}
-                          {settings?.accountNo && <div>Account No: <span className="font-medium text-gray-900">{settings.accountNo}</span></div>}
-                          {settings?.ifsc && <div>IFSC Code: <span className="font-medium text-gray-900">{settings.ifsc}</span></div>}
-                          {settings?.upiId && <div>UPI ID: <span className="font-medium text-gray-900">{settings.upiId}</span></div>}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  // SECTION 6: NOTES & SIGNATURE
-                  if (sectionId === 'notes_signature') {
-                    return (
-                      <div key="notes_signature" className="mt-8 pt-6 border-t border-gray-200">
-                        {layoutConfig.showNotes && data.notes && (
-                          <div className="mb-6">
-                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notes & Terms</h4>
-                            <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.notes}</p>
+                      {/* BANK DETAILS */}
+                      {el.type === 'bank_details' && (
+                        <div>
+                          <p className="font-bold text-xs uppercase tracking-wider text-gray-700 mb-1.5">Bank & Payment Information</p>
+                          <div className="grid grid-cols-2 gap-1 text-xs text-gray-600">
+                            <div>Bank: <span className="font-semibold text-gray-800">{settings?.bankName || 'State Bank of India'}</span></div>
+                            <div>A/C: <span className="font-semibold text-gray-800">{settings?.accountNo || 'XXXX123456'}</span></div>
+                            <div>IFSC: <span className="font-semibold text-gray-800">{settings?.ifsc || 'SBIN0001234'}</span></div>
+                            <div>UPI ID: <span className="font-semibold text-gray-800">{settings?.upiId || 'company@upi'}</span></div>
                           </div>
-                        )}
-
-                        <div className="flex justify-between items-end pt-4">
-                          {layoutConfig.showFooterMessage && (
-                            <p className="text-sm font-semibold" style={{ color: layoutConfig.primaryColor }}>
-                              {layoutConfig.footerMessage || 'Thank you for your business!'}
-                            </p>
-                          )}
-
-                          {layoutConfig.showSignature && (
-                            <div className="text-center">
-                              <div className="w-36 border-b border-gray-400 mb-2"></div>
-                              <span className="text-xs text-gray-500 font-medium block">
-                                {layoutConfig.signatureText || 'Authorized Signature'}
-                              </span>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    );
-                  }
+                      )}
 
-                  return null;
+                      {/* NOTES & TERMS */}
+                      {el.type === 'notes_terms' && (
+                        <div>
+                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Notes & Terms</p>
+                          <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-wrap">
+                            {data.notes || 'Payment due within 15 days of invoice date. Thank you for your business!'}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* SIGNATURE BLOCK */}
+                      {el.type === 'signature_block' && (
+                        <div className="text-center">
+                          <div className="w-36 border-b border-gray-400 mx-auto mb-1.5"></div>
+                          <p className="text-xs font-semibold text-gray-700">Authorized Signature</p>
+                          <p className="text-[10px] text-gray-400">{settings?.companyName || 'For Organization'}</p>
+                        </div>
+                      )}
+
+                    </div>
+                  );
                 })}
               </>
             )}
