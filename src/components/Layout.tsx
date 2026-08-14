@@ -5,7 +5,6 @@ import {
   LayoutDashboard, 
   History, 
   PlusCircle, 
-  FileSearch, 
   Users, 
   Settings, 
   ShieldAlert, 
@@ -25,7 +24,6 @@ export default function Layout() {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'History', href: '/bills', icon: History },
     { name: 'Create Invoice', href: '/bills/create', icon: PlusCircle },
-    { name: 'OCR Upload', href: '/bills/review', icon: FileSearch },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
