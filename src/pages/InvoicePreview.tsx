@@ -5,9 +5,32 @@ import { Button } from '../components/ui/button';
 import { Printer, Download, Save, ArrowLeft, Building2, Share2, CheckCircle, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomMonishaLayout } from '../pages/CustomMonishaLayout';
-import { CanvaLayoutDesign, defaultCanvaDesign } from '../pages/Settings';
-
 import { toast } from 'sonner';
+
+export interface InvoiceLayoutDesign {
+  canvasBg: string;
+  primaryColor: string;
+  fontFamily: 'sans' | 'serif' | 'mono';
+  canvasHeight: number;
+  elements: any[];
+}
+
+export const defaultInvoiceDesign: InvoiceLayoutDesign = {
+  canvasBg: '#ffffff',
+  primaryColor: '#18181b',
+  fontFamily: 'sans',
+  canvasHeight: 1050,
+  elements: [
+    { id: 'company_header', type: 'company_header', x: 40, y: 40, width: 400, visible: true },
+    { id: 'invoice_meta', type: 'invoice_meta', x: 480, y: 40, width: 280, visible: true },
+    { id: 'billed_to', type: 'billed_to', x: 40, y: 160, width: 720, visible: true },
+    { id: 'items_table', type: 'items_table', x: 40, y: 290, width: 720, visible: true },
+    { id: 'totals_card', type: 'totals_card', x: 480, y: 540, width: 280, visible: true },
+    { id: 'bank_details', type: 'bank_details', x: 40, y: 540, width: 410, visible: true },
+    { id: 'notes_terms', type: 'notes_terms', x: 40, y: 690, width: 440, visible: true },
+    { id: 'signature_block', type: 'signature_block', x: 520, y: 690, width: 240, visible: true }
+  ]
+};
 import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -247,8 +270,8 @@ export default function InvoicePreview() {
 
   if (!data) return null;
 
-  // Parse user's Canva layout config
-  let canvaDesign: CanvaLayoutDesign = defaultCanvaDesign;
+  // Parse user's layout config
+  let canvaDesign: InvoiceLayoutDesign = defaultInvoiceDesign;
   const rawLayout = settings?.invoiceLayout || 'standard';
 
   if (rawLayout.startsWith('{')) {
