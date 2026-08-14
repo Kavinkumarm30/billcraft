@@ -30,9 +30,11 @@ import {
   FileUp,
   Clock,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  Smartphone,
+  CreditCard
 } from 'lucide-react';
-import { Dialog, DialogContent } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 
 export interface CanvasElement {
   id: string;
@@ -211,7 +213,7 @@ export default function Settings() {
   const queryClient = useQueryClient();
 
   // 3 Distinct Main Pages inside Settings
-  const [activeTab, setActiveTab] = useState<'upload' | 'canva' | 'details'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'canva' | 'details'>('details');
   
   // Organization profile states
   const [companyName, setCompanyName] = useState('');
@@ -225,6 +227,9 @@ export default function Settings() {
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
   const [selectedLayoutId, setSelectedLayoutId] = useState('standard');
+
+  // Preview Layout Modal state
+  const [previewingLayout, setPreviewingLayout] = useState<any | null>(null);
 
   // Canva Designer state
   const [design, setDesign] = useState<CanvaLayoutDesign>(defaultCanvaDesign);
@@ -1281,7 +1286,7 @@ export default function Settings() {
                     Predefined Invoice Layouts
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Choose from our curated 1-click professional bill templates
+                    Click any layout to preview and activate it for your business bills
                   </CardDescription>
                 </div>
                 {settings?.hasCustomLayoutAccess && (
@@ -1303,29 +1308,25 @@ export default function Settings() {
                     <div
                       key={layout.id}
                       onClick={() => {
-                        if (isCustomLocked) {
-                          toast.error('Orange Classic is a custom layout. Upload your bill design under "Upload the Bill" tab to request access!');
-                          return;
-                        }
-                        setSelectedLayoutId(layout.id);
-                        handleSaveProfileAndLayout(layout.id);
-                        toast.success(`Selected "${layout.name}" layout for all your bills!`);
+                        setPreviewingLayout(layout);
                       }}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between group hover:shadow-md ${
                         isSelected 
-                          ? 'border-blue-600 bg-blue-50/60 ring-2 ring-blue-600 shadow-sm' 
+                          ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600 shadow-sm' 
                           : isCustomLocked 
-                            ? 'border-gray-200 bg-gray-50/70 opacity-70 hover:opacity-100' 
-                            : 'border-gray-200 bg-white hover:border-blue-400 hover:shadow-xs'
+                            ? 'border-gray-200 bg-gray-50/70 opacity-75' 
+                            : 'border-gray-200 bg-white hover:border-blue-400'
                       }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-bold text-xs text-gray-900">{layout.name}</span>
+                          <span className="font-black text-sm text-gray-900 group-hover:text-blue-600 transition-colors">
+                            {layout.name}
+                          </span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             layout.isCustom 
                               ? isCustomUnlocked ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
-                              : 'bg-gray-100 text-gray-700'
+                              : isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
                           }`}>
                             {layout.badge}
                           </span>
@@ -1333,18 +1334,18 @@ export default function Settings() {
                         <p className="text-[11px] text-gray-500 leading-snug">{layout.desc}</p>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+                      <div className="mt-4 pt-2.5 border-t border-gray-100 flex items-center justify-between">
                         {isSelected ? (
-                          <span className="text-[11px] font-bold text-blue-600 flex items-center gap-1">
+                          <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
                             <Check className="w-3.5 h-3.5" /> Active Layout
                           </span>
                         ) : isCustomLocked ? (
-                          <span className="text-[10px] font-bold text-amber-600">
+                          <span className="text-[11px] font-bold text-amber-600">
                             Upload bill to unlock
                           </span>
                         ) : (
-                          <span className="text-[10px] font-medium text-gray-400">
-                            Click to activate
+                          <span className="text-xs font-semibold text-gray-400 group-hover:text-blue-600 flex items-center gap-1 transition-colors">
+                            <Eye className="w-3.5 h-3.5" /> Click to Preview & Apply
                           </span>
                         )}
                       </div>
@@ -1491,6 +1492,242 @@ export default function Settings() {
 
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* LIVE INTERACTIVE LAYOUT PREVIEW MODAL                                     */}
+      {/* ========================================================================= */}
+      <Dialog open={!!previewingLayout} onOpenChange={() => setPreviewingLayout(null)}>
+        <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden bg-gray-100">
+          
+          {/* Modal Header */}
+          <div className="p-4 bg-white border-b flex items-center justify-between shrink-0">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                  {previewingLayout?.badge}
+                </span>
+                <DialogTitle className="text-base font-black text-gray-900">
+                  {previewingLayout?.name} Layout Preview
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-gray-500 mt-0.5">
+                {previewingLayout?.desc}
+              </DialogDescription>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedLayoutId === previewingLayout?.id ? (
+                <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-green-600" />
+                  Currently Active Layout
+                </span>
+              ) : previewingLayout?.isCustom && !settings?.hasCustomLayoutAccess ? (
+                <Button
+                  onClick={() => {
+                    setPreviewingLayout(null);
+                    setActiveTab('upload');
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8"
+                >
+                  Upload Bill to Unlock
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    setSelectedLayoutId(previewingLayout.id);
+                    handleSaveProfileAndLayout(previewingLayout.id);
+                    setPreviewingLayout(null);
+                    toast.success(`"${previewingLayout.name}" layout activated for your business bills!`);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-8 shadow-sm"
+                >
+                  <Check className="w-3.5 h-3.5 mr-1" />
+                  Activate This Layout
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Modal Scrollable Bill Canvas Body */}
+          <div className="flex-1 overflow-y-auto p-6 flex justify-center bg-gray-200/80">
+            
+            {/* Visual Simulated Invoice Preview Container */}
+            <div 
+              style={{ width: '700px', minHeight: '850px' }}
+              className={`bg-white shadow-xl rounded-lg p-8 border border-gray-300 space-y-6 select-none ${
+                previewingLayout?.id === 'elegant' ? 'font-serif' :
+                previewingLayout?.id === 'tech' ? 'font-mono' : 'font-sans'
+              }`}
+            >
+              {/* Header Rendering based on layout type */}
+              {previewingLayout?.id === 'minimal' ? (
+                <div className="text-center border-b pb-6 space-y-1">
+                  <h1 className="text-2xl font-black tracking-tight text-gray-900">{companyName || 'BillCraft Inc.'}</h1>
+                  <p className="text-xs text-gray-500">{address || '123 Tech Hub, Chennai, India'}</p>
+                  {gstNo && <p className="text-xs font-semibold text-gray-600">GSTIN: {gstNo}</p>}
+                </div>
+              ) : previewingLayout?.id === 'modern' ? (
+                <div className="flex justify-between items-start border-b pb-6">
+                  <div>
+                    <h2 className="text-3xl font-black text-blue-600 tracking-wider">INVOICE</h2>
+                    <p className="text-xs font-bold text-gray-700 mt-1">#INV-2026-0042</p>
+                    <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
+                  </div>
+                  <div className="text-right">
+                    <h1 className="text-xl font-black text-gray-900">{companyName || 'BillCraft Inc.'}</h1>
+                    <p className="text-xs text-gray-500 mt-0.5">{address || '123 Tech Hub, Chennai'}</p>
+                    {gstNo && <p className="text-xs font-bold text-gray-600">GST: {gstNo}</p>}
+                  </div>
+                </div>
+              ) : previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? (
+                <div className="bg-slate-900 text-white p-6 rounded-xl flex justify-between items-center -mx-2 -mt-2 shadow-md">
+                  <div>
+                    <h1 className="text-2xl font-black tracking-wider text-white">{companyName || 'BillCraft Corporate'}</h1>
+                    <p className="text-xs text-slate-300 mt-0.5">{address || '123 Tech Hub, Chennai'}</p>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-2xl font-black tracking-widest text-slate-100 uppercase">INVOICE</h2>
+                    <p className="text-xs text-slate-300">#INV-2026-0042</p>
+                  </div>
+                </div>
+              ) : previewingLayout?.id === 'orange-classic' ? (
+                <div className="flex justify-between items-start border-b-2 border-orange-500 pb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-orange-600 text-white rounded-xl flex items-center justify-center font-black text-base shadow-sm">
+                      {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-black text-orange-600">{companyName || 'Monisha Retail Corp'}</h1>
+                      <p className="text-xs text-gray-600">{address || '123 Market Road'}</p>
+                      {gstNo && <p className="text-xs font-bold text-gray-800">GST: {gstNo}</p>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-3xl font-black text-orange-600">INVOICE</h2>
+                    <p className="text-xs font-bold text-gray-900">#INV-2026-0042</p>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-block mt-1">
+                      PAID
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between items-start border-b pb-6">
+                  <div className="flex items-center gap-3">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-lg" />
+                    ) : (
+                      <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm">
+                        {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
+                      </div>
+                    )}
+                    <div>
+                      <h1 className="text-xl font-bold text-gray-900 tracking-tight">{companyName || 'BillCraft Inc.'}</h1>
+                      <p className="text-xs text-gray-500 mt-0.5">{address || '123 Business Way, Suite 100'}</p>
+                      {gstNo && <p className="text-xs font-semibold text-gray-600">GST: {gstNo}</p>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <h2 className="text-2xl font-black tracking-wider text-gray-900">INVOICE</h2>
+                    <p className="text-xs font-bold text-gray-900 mt-1">#INV-2026-0042</p>
+                    <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-block mt-1">
+                      PAID
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Billed To Customer Details */}
+              <div className={`p-4 rounded-xl ${
+                previewingLayout?.id === 'orange-classic' ? 'bg-orange-50/60 border border-orange-200' :
+                previewingLayout?.id === 'professional' ? 'bg-gray-50 border border-gray-200' :
+                previewingLayout?.id === 'playful' ? 'bg-purple-50/50 border border-purple-100 rounded-2xl' :
+                'bg-gray-50'
+              }`}>
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Billed To Customer</p>
+                <h4 className="font-bold text-sm text-gray-900">M. Kavin Kumar</h4>
+                <p className="text-xs text-gray-600 mt-0.5">1/239 KK Palli, Phone: +91 9361654668</p>
+              </div>
+
+              {/* Items Table */}
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className={`border-b ${
+                    previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? 'bg-slate-900 text-white' :
+                    previewingLayout?.id === 'orange-classic' ? 'bg-orange-600 text-white font-bold' :
+                    previewingLayout?.id === 'playful' ? 'bg-purple-100 text-purple-950 font-bold' :
+                    'bg-gray-100 text-gray-700 font-bold'
+                  }`}>
+                    <th className="py-2.5 px-3">Item Description</th>
+                    <th className="py-2.5 px-3 text-center">Qty</th>
+                    <th className="py-2.5 px-3 text-right">Rate</th>
+                    <th className="py-2.5 px-3 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 text-gray-800">
+                  <tr>
+                    <td className="py-2.5 px-3 font-medium">Software Development & Consulting</td>
+                    <td className="py-2.5 px-3 text-center">1</td>
+                    <td className="py-2.5 px-3 text-right">₹2,500.00</td>
+                    <td className="py-2.5 px-3 text-right font-bold">₹2,500.00</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2.5 px-3 font-medium">Cloud Infrastructure & Setup</td>
+                    <td className="py-2.5 px-3 text-center">1</td>
+                    <td className="py-2.5 px-3 text-right">₹1,450.00</td>
+                    <td className="py-2.5 px-3 text-right font-bold">₹1,450.00</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Summary and Bank Details Section */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div className="space-y-1 text-xs text-gray-600">
+                  <p className="font-bold text-gray-800 uppercase tracking-wider text-[10px]">Payment Details</p>
+                  <p>Bank: <span className="font-semibold text-gray-900">{bankName || 'State Bank of India'}</span></p>
+                  <p>Account: <span className="font-semibold text-gray-900">{accountNo || 'XXXX123456'}</span></p>
+                  <p>UPI ID: <span className="font-semibold text-gray-900">{upiId || 'business@upi'}</span></p>
+                </div>
+
+                <div className={`space-y-2 p-4 rounded-xl text-xs ${
+                  previewingLayout?.id === 'orange-classic' ? 'bg-orange-600 text-white shadow-sm' :
+                  previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? 'bg-slate-900 text-white shadow-sm' :
+                  previewingLayout?.id === 'modern' ? 'bg-blue-600 text-white shadow-sm' :
+                  'bg-gray-50 border'
+                }`}>
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span className="font-bold">₹3,950.00</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax (5%):</span>
+                    <span className="font-bold">₹197.50</span>
+                  </div>
+                  <div className="flex justify-between font-black text-base pt-2 border-t border-current">
+                    <span>Grand Total:</span>
+                    <span>₹4,147.50</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer and Sign */}
+              <div className="flex justify-between items-end pt-8 text-xs text-gray-500">
+                <div>
+                  <p className="font-bold text-gray-700">Terms & Conditions</p>
+                  <p className="text-[11px] text-gray-500">Payment due within 15 days. Thank you for your business!</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-32 border-b border-gray-400 mx-auto mb-1"></div>
+                  <p className="font-bold text-gray-800">Authorized Signature</p>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </DialogContent>
+      </Dialog>
 
       {/* Full Image Preview Modal */}
       <Dialog open={!!fullPreviewUrl} onOpenChange={() => setFullPreviewUrl(null)}>
