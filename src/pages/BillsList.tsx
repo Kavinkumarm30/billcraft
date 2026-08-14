@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Search, Printer, Trash2, Pencil, CheckCircle2, Clock } from 'lucide-react';
+import { Search, Printer, Trash2, Pencil, CheckCircle2, Clock, Plus, Receipt } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { Button } from '../components/ui/button';
 import {
@@ -127,125 +127,194 @@ export default function BillsList() {
   };
 
   return (
-    <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 max-w-6xl mx-auto">
+      {/* Header & New Bill CTA */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">History</h1>
-          <p className="text-gray-500 mt-1">View, edit, print, and share previously generated bills</p>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Invoice History</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">View, edit, print, and share previously generated bills</p>
         </div>
+        <Link to="/bills/create" className="w-full sm:w-auto">
+          <Button className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white font-bold text-xs h-9 shadow-sm">
+            <Plus className="mr-1.5 h-4 w-4" /> New Invoice
+          </Button>
+        </Link>
       </div>
 
-      <Card className="border-0 shadow-sm ring-1 ring-gray-100">
-        <CardHeader className="py-4 border-b border-gray-100">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
+      <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
+        {/* Search Bar */}
+        <CardHeader className="p-4 border-b border-gray-100 bg-gray-50/50">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <Input 
               type="search" 
-              placeholder="Search bills by number or customer..." 
-              className="pl-9 bg-gray-50/50" 
+              placeholder="Search by invoice # or customer..." 
+              className="pl-9 bg-white text-xs h-9" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </CardHeader>
+
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-gray-50/80">
-              <TableRow>
-                <TableHead>Invoice No</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                 <TableRow>
-                   <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                      <div className="flex flex-col items-center justify-center gap-4">
-                        <Logo className="h-10 animate-pulse grayscale opacity-50" />
-                        <span>Loading history...</span>
-                      </div>
-                    </TableCell>
-                 </TableRow>
-              ) : filteredInvoices.length === 0 ? (
-                 <TableRow>
-                   <TableCell colSpan={6} className="text-center py-12 text-gray-500">
-                     <p className="text-base font-medium text-gray-700">No bills found in history</p>
-                     <p className="text-sm text-gray-400 mt-1">Generate a bill from OCR or Create Invoice to see it here</p>
-                   </TableCell>
-                 </TableRow>
-              ) : (
-                filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id} className="hover:bg-gray-50/70 transition-colors">
-                    <TableCell className="font-semibold text-black">
-                      {invoice.invoiceNumber}
-                    </TableCell>
-                    <TableCell className="font-medium text-gray-800">{invoice.customer?.name || 'Unknown'}</TableCell>
-                    <TableCell className="text-gray-600">{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-semibold text-gray-900">₹{Number(invoice.grandTotal || 0).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+          {loading ? (
+            <div className="text-center py-12 text-gray-500">
+              <div className="flex flex-col items-center justify-center gap-3">
+                <Logo className="h-8 animate-pulse grayscale opacity-50" />
+                <span className="text-xs font-semibold">Loading invoices...</span>
+              </div>
+            </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 p-4">
+              <Receipt className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+              <p className="text-sm font-bold text-gray-700">No bills found in history</p>
+              <p className="text-xs text-gray-400 mt-1">Generate a bill from OCR or Create Invoice to see it here</p>
+            </div>
+          ) : (
+            <>
+              {/* 1. Mobile Cards View (Visible on < md screens) */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {filteredInvoices.map((invoice) => (
+                  <div key={invoice.id} className="p-4 hover:bg-gray-50/70 transition-colors space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-xs text-gray-900 bg-gray-100 px-2 py-0.5 rounded">
+                        {invoice.invoiceNumber}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         invoice.status === 'PAID' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                       }`}>
-                        {invoice.status === 'PAID' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        {invoice.status === 'PAID' ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Clock className="w-3 h-3 text-orange-600" />}
                         {invoice.status || 'PENDING'}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1.5">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEdit(invoice);
-                          }}
-                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Edit Bill"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreview(invoice);
-                          }}
-                          className="p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 rounded-md transition-colors"
-                          title="View & Print"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInvoiceToDelete(invoice);
-                          }}
-                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete Invoice"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-sm text-gray-900">{invoice.customer?.name || 'Walk-in Customer'}</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">{new Date(invoice.date).toLocaleDateString()}</p>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                      <div className="text-right">
+                        <span className="text-xs text-gray-400 font-medium block">Total</span>
+                        <span className="font-black text-base text-gray-900">₹{Number(invoice.grandTotal || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePreview(invoice)}
+                        className="h-8 text-xs font-bold px-3 text-gray-700 hover:bg-gray-100"
+                      >
+                        <Printer className="h-3.5 w-3.5 mr-1" /> View / Print
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEdit(invoice)}
+                        className="h-8 text-xs font-bold px-3 text-blue-600 border-blue-200 bg-blue-50/50 hover:bg-blue-100"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setInvoiceToDelete(invoice)}
+                        className="h-8 text-xs font-bold px-2 text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 2. Desktop Table View (Visible on >= md screens) */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-gray-50/80">
+                    <TableRow>
+                      <TableHead className="font-bold text-xs">Invoice No</TableHead>
+                      <TableHead className="font-bold text-xs">Customer</TableHead>
+                      <TableHead className="font-bold text-xs">Date</TableHead>
+                      <TableHead className="font-bold text-xs">Amount</TableHead>
+                      <TableHead className="font-bold text-xs">Status</TableHead>
+                      <TableHead className="text-right font-bold text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInvoices.map((invoice) => (
+                      <TableRow key={invoice.id} className="hover:bg-gray-50/70 transition-colors">
+                        <TableCell className="font-mono font-bold text-xs text-black">
+                          {invoice.invoiceNumber}
+                        </TableCell>
+                        <TableCell className="font-semibold text-xs text-gray-800">{invoice.customer?.name || 'Walk-in Customer'}</TableCell>
+                        <TableCell className="text-xs text-gray-600">{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-bold text-xs text-gray-900">₹{Number(invoice.grandTotal || 0).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            invoice.status === 'PAID' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                          }`}>
+                            {invoice.status === 'PAID' ? <CheckCircle2 className="w-3 h-3 text-green-600" /> : <Clock className="w-3 h-3 text-orange-600" />}
+                            {invoice.status || 'PENDING'}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(invoice);
+                              }}
+                              className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Edit Bill"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePreview(invoice);
+                              }}
+                              className="p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 rounded-md transition-colors"
+                              title="View & Print"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setInvoiceToDelete(invoice);
+                              }}
+                              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                              title="Delete Invoice"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={!!invoiceToDelete} onOpenChange={(open) => !open && setInvoiceToDelete(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle>Delete Invoice?</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base font-bold">Delete Invoice?</DialogTitle>
+            <DialogDescription className="text-xs">
               Are you sure you want to permanently delete invoice <strong>{invoiceToDelete?.invoiceNumber}</strong>? 
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setInvoiceToDelete(null)} disabled={isDeleting}>
               Cancel
             </Button>

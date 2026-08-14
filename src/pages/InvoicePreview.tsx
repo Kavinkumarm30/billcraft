@@ -288,36 +288,36 @@ export default function InvoicePreview() {
   const isCustomMonisha = rawLayout === 'orange-classic';
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 print:p-0 print:m-0 print:space-y-0">
+    <div className="p-3 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-4 sm:space-y-6 print:p-0 print:m-0 print:space-y-0 pb-20 md:pb-8">
       {/* Action Bar - Hidden during printing */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 print:hidden">
         <Button 
           variant="ghost" 
           onClick={() => {
             sessionStorage.setItem('extractedBillData', JSON.stringify(data));
             navigate('/bills/review', { state: { isEditing: !!location.state?.invoiceId, invoiceId: location.state?.invoiceId } });
           }} 
-          className="text-gray-600 hover:text-black"
+          className="text-gray-600 hover:text-black text-xs font-semibold px-2"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Edit
+          <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Edit
         </Button>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Button variant="outline" onClick={executePrint} className="flex-1 sm:flex-none">
-            <Printer className="mr-2 h-4 w-4" /> Print
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          <Button variant="outline" size="sm" onClick={executePrint} className="flex-1 sm:flex-none text-xs font-bold h-9">
+            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
           </Button>
-          <Button variant="outline" onClick={(e) => { e.preventDefault(); handleDownload(); }} className="flex-1 sm:flex-none">
-            <Download className="mr-2 h-4 w-4" /> Download PDF
+          <Button variant="outline" size="sm" onClick={(e) => { e.preventDefault(); handleDownload(); }} className="flex-1 sm:flex-none text-xs font-bold h-9">
+            <Download className="mr-1.5 h-3.5 w-3.5" /> PDF
           </Button>
-          <Button variant="outline" onClick={(e) => { e.preventDefault(); handleDownloadPNG(); }} className="flex-1 sm:flex-none">
-            <ImageIcon className="mr-2 h-4 w-4" /> Download PNG
+          <Button variant="outline" size="sm" onClick={(e) => { e.preventDefault(); handleDownloadPNG(); }} className="flex-1 sm:flex-none text-xs font-bold h-9">
+            <ImageIcon className="mr-1.5 h-3.5 w-3.5" /> PNG
           </Button>
           {isReadOnly && (
-            <Button variant="outline" onClick={(e) => { e.preventDefault(); handleShare(); }} className="flex-1 sm:flex-none">
-              <Share2 className="mr-2 h-4 w-4" /> Share
+            <Button variant="outline" size="sm" onClick={(e) => { e.preventDefault(); handleShare(); }} className="flex-1 sm:flex-none text-xs font-bold h-9">
+              <Share2 className="mr-1.5 h-3.5 w-3.5" /> Share
             </Button>
           )}
-          {!isReadOnly && <Button onClick={openPaymentModal} disabled={isSaving} className="flex-1 sm:flex-none bg-black hover:bg-gray-800 text-white">
-            <Save className="mr-2 h-4 w-4" /> {isSaving ? 'Saving...' : 'Update & Issue'}
+          {!isReadOnly && <Button size="sm" onClick={openPaymentModal} disabled={isSaving} className="w-full sm:w-auto bg-black hover:bg-gray-800 text-white text-xs font-bold h-9 shadow-sm">
+            <Save className="mr-1.5 h-3.5 w-3.5" /> {isSaving ? 'Saving...' : 'Update & Issue'}
           </Button>}
         </div>
       </div>

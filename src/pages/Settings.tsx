@@ -675,24 +675,24 @@ export default function Settings() {
         <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden bg-gray-100">
           
           {/* Modal Header */}
-          <div className="p-4 bg-white border-b flex items-center justify-between shrink-0">
+          <div className="p-3.5 sm:p-4 bg-white border-b flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
+                <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-blue-100 text-blue-800">
                   {previewingLayout?.badge}
                 </span>
-                <DialogTitle className="text-base font-black text-gray-900">
+                <DialogTitle className="text-sm sm:text-base font-black text-gray-900">
                   {previewingLayout?.name} Layout Preview
                 </DialogTitle>
               </div>
-              <DialogDescription className="text-xs text-gray-500 mt-0.5">
+              <DialogDescription className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
                 {previewingLayout?.desc}
               </DialogDescription>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               {selectedLayoutId === previewingLayout?.id ? (
-                <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                <span className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-xl flex items-center gap-1.5 w-full sm:w-auto justify-center">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                   Currently Active Layout
                 </span>
@@ -702,7 +702,7 @@ export default function Settings() {
                     setPreviewingLayout(null);
                     setActiveTab('upload');
                   }}
-                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8"
+                  className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8"
                 >
                   Upload Bill to Unlock
                 </Button>
@@ -714,7 +714,7 @@ export default function Settings() {
                     setPreviewingLayout(null);
                     toast.success(`"${previewingLayout.name}" layout activated for your business bills!`);
                   }}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-8 shadow-sm"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold h-9 shadow-sm"
                 >
                   <Check className="w-3.5 h-3.5 mr-1" />
                   Activate This Layout
@@ -724,12 +724,12 @@ export default function Settings() {
           </div>
 
           {/* Modal Scrollable Bill Canvas Body */}
-          <div className="flex-1 overflow-y-auto p-6 flex justify-center bg-gray-200/80">
+          <div className="flex-1 overflow-auto p-2 sm:p-6 flex justify-center bg-gray-200/80">
             
             {/* Visual Simulated Invoice Preview Container */}
             <div 
-              style={{ width: '700px', minHeight: '850px' }}
-              className={`bg-white shadow-xl rounded-lg p-8 border border-gray-300 space-y-6 select-none ${
+              style={{ width: '100%', maxWidth: '680px', minHeight: '800px' }}
+              className={`bg-white shadow-xl rounded-xl p-4 sm:p-8 border border-gray-300 space-y-4 sm:space-y-6 select-none ${
                 previewingLayout?.id === 'elegant' ? 'font-serif' :
                 previewingLayout?.id === 'tech' ? 'font-mono' : 'font-sans'
               }`}

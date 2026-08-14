@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { UploadCloud, FileImage, ArrowRight, Loader2, X } from 'lucide-react';
+import { UploadCloud, FileImage, ArrowRight, Loader2, X, Camera, PenTool, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -83,7 +83,7 @@ export default function CreateBill() {
       toast.success('Data extracted successfully');
       navigate('/bills/review');
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       toast.error(error.message || 'Failed to extract data from image. Please try again.');
     } finally {
@@ -110,61 +110,63 @@ export default function CreateBill() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Create New Bill</h1>
-          <p className="text-gray-500 mt-1">Upload a handwritten bill or invoice to digitize it</p>
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Create Invoice</h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Upload a photo of a bill to extract details, or create from scratch</p>
         </div>
-        <Button onClick={handleManualCreate} variant="outline" className="shrink-0 bg-white hover:bg-gray-50">
+        <Button 
+          onClick={handleManualCreate} 
+          variant="outline" 
+          className="shrink-0 bg-white hover:bg-gray-50 text-xs font-bold h-9 shadow-2xs w-full sm:w-auto"
+        >
+          <PenTool className="mr-1.5 h-3.5 w-3.5" />
           Create Manually
-          <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
 
-      <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
-        <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
-          <CardTitle className="text-lg">Upload Document</CardTitle>
-          <CardDescription>Support for JPG, PNG, and JPEG</CardDescription>
+      <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden rounded-2xl">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 p-4 sm:p-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-black" />
+            <CardTitle className="text-sm sm:text-base font-bold text-gray-900">AI Bill Digitizer</CardTitle>
+          </div>
+          <CardDescription className="text-xs text-gray-500">
+            Snap a receipt or upload an invoice image to auto-fill line items with Gemini AI
+          </CardDescription>
         </CardHeader>
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           {!file ? (
             <div
-              className={`mt-2 flex justify-center rounded-xl border-2 border-dashed px-6 py-16 transition-colors ${
-                isDragging ? 'border-black bg-gray-100' : 'border-gray-300 hover:border-gray-400'
+              className={`rounded-2xl border-2 border-dashed p-6 sm:p-12 transition-all text-center ${
+                isDragging ? 'border-black bg-gray-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50/40'
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <div className="text-center space-y-4">
-                <UploadCloud className="mx-auto h-12 w-12 text-gray-400" aria-hidden="true" />
-                <div className="flex flex-col items-center gap-4 text-sm leading-6 text-gray-600">
-                  <div className="flex items-center justify-center">
-                    <label className="relative rounded-md bg-transparent font-semibold text-black focus-within:outline-none focus-within:ring-2 focus-within:ring-black focus-within:ring-offset-2 hover:text-gray-700 cursor-pointer">
-                      <span>Upload a file</span>
-                      <input 
-                        ref={fileInputRef} 
-                        id="file-upload" 
-                        name="file-upload" 
-                        type="file" 
-                        className="sr-only" 
-                        accept="image/*"
-                        onChange={handleFileChange}
-                      />
-                    </label>
-                    <p className="pl-1">or drag and drop</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 w-full px-8">
-                    <div className="h-px bg-gray-200 flex-1"></div>
-                    <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">or</span>
-                    <div className="h-px bg-gray-200 flex-1"></div>
-                  </div>
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-white border border-gray-200 shadow-xs flex items-center justify-center mx-auto text-black">
+                  <UploadCloud className="h-7 w-7 text-gray-700" />
+                </div>
+                
+                <div>
+                  <p className="text-sm font-bold text-gray-900">
+                    Upload receipt, bill, or invoice photo
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Supports JPG, PNG, and JPEG formats (up to 15MB)
+                  </p>
+                </div>
 
-                  <label className="relative inline-flex items-center justify-center gap-2 rounded-md bg-white px-4 py-2 font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus-within:outline-none focus-within:ring-2 focus-within:ring-black focus-within:ring-offset-2 cursor-pointer transition-all">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                    <span>Take a Photo</span>
+                {/* Mobile & Desktop Action Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                  {/* Camera Snap on Mobile */}
+                  <label className="flex items-center justify-center gap-2 rounded-xl bg-black text-white px-4 py-2.5 font-bold text-xs shadow-sm hover:bg-gray-800 cursor-pointer transition-all active:scale-95">
+                    <Camera className="w-4 h-4" />
+                    <span>Take Photo</span>
                     <input 
                       type="file" 
                       className="sr-only" 
@@ -173,48 +175,65 @@ export default function CreateBill() {
                       onChange={handleFileChange}
                     />
                   </label>
+
+                  {/* Browse Gallery / Files */}
+                  <label className="flex items-center justify-center gap-2 rounded-xl bg-white text-gray-900 border border-gray-300 px-4 py-2.5 font-bold text-xs shadow-2xs hover:bg-gray-50 cursor-pointer transition-all active:scale-95">
+                    <UploadCloud className="w-4 h-4 text-gray-500" />
+                    <span>Browse Gallery</span>
+                    <input 
+                      ref={fileInputRef} 
+                      type="file" 
+                      className="sr-only" 
+                      accept="image/*"
+                      onChange={handleFileChange}
+                    />
+                  </label>
                 </div>
-                <p className="text-xs leading-5 text-gray-500 mt-2">PNG, JPG up to 10MB</p>
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 flex-shrink-0 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <FileImage className="h-6 w-6 text-black" />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 flex-shrink-0 bg-white border rounded-lg flex items-center justify-center shadow-2xs">
+                    <FileImage className="h-5 w-5 text-black" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 truncate max-w-xs">{file.name}</p>
-                    <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-gray-900 truncate max-w-[180px] sm:max-w-xs">{file.name}</p>
+                    <p className="text-[10px] text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB • Image Attached</p>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500" onClick={() => { setFile(null); setPreview(null); }}>
-                  <X className="h-5 w-5" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-gray-400 hover:text-red-500 rounded-lg shrink-0" 
+                  onClick={() => { setFile(null); setPreview(null); }}
+                >
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
 
               {preview && (
-                <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-100 flex justify-center max-h-[400px]">
-                  <img src={preview} alt="Preview" className="object-contain max-h-[400px]" />
+                <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-900 flex justify-center max-h-[350px]">
+                  <img src={preview} alt="Preview" className="object-contain max-h-[350px]" />
                 </div>
               )}
 
-              <div className="flex justify-end pt-4 border-t border-gray-100">
+              <div className="flex justify-end pt-2">
                 <Button 
                   onClick={handleExtract} 
                   disabled={isExtracting}
-                  className="h-11 px-8 text-base shadow-sm"
+                  className="w-full sm:w-auto h-11 px-8 bg-black hover:bg-gray-800 text-white font-bold text-xs shadow-md transition-transform active:scale-95"
                 >
                   {isExtracting ? (
                     <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Extracting via AI...
                     </>
                   ) : (
                     <>
-                      Process Document
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                      Extract & Review Line Items
+                      <ArrowRight className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>

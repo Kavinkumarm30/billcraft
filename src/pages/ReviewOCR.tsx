@@ -413,106 +413,165 @@ export default function ReviewOCR() {
           </Card>
 
           {/* Items Table Card */}
-          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
-            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">Items & Products</CardTitle>
-              <Button size="sm" variant="outline" onClick={addItem} className="h-8">
-                <Plus className="mr-1 h-3 w-3" /> Add Item
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100 overflow-hidden">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-3.5 px-4 sm:px-6 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold text-gray-900">Items & Products</CardTitle>
+                <p className="text-[11px] text-gray-500 mt-0.5">{data.items?.length || 0} line item(s)</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={addItem} className="h-8 text-xs font-bold bg-white">
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add Item
               </Button>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader className="bg-gray-50/80">
-                  <TableRow>
-                    <TableHead className="w-[40%]">Description</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items?.map((item: any, idx: number) => (
-                    <TableRow key={idx}>
-                      <TableCell className="p-2">
-                        <Input 
-                          value={item.description || ''} 
-                          onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                          placeholder="Item name / description"
-                          className="h-8 text-sm"
-                        />
-                      </TableCell>
-                      <TableCell className="p-2">
+              {/* 1. Mobile Item Cards (Visible on < sm screens) */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {data.items?.map((item: any, idx: number) => (
+                  <div key={idx} className="p-3.5 space-y-2.5 bg-white">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">#{idx + 1}</span>
+                      <Input 
+                        value={item.description || ''} 
+                        onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                        placeholder="Item Description"
+                        className="h-8 text-xs font-semibold flex-1"
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => removeItem(idx)} 
+                        className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg shrink-0"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <Label className="text-[10px] text-gray-500 font-semibold mb-0.5 block">Qty</Label>
                         <Input 
                           type="number"
                           value={item.quantity !== undefined && item.quantity !== null && !Number.isNaN(item.quantity) ? item.quantity : ''} 
                           onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value))}
-                          className="h-8 text-sm w-16"
+                          className="h-8 text-xs font-bold text-center"
+                          placeholder="1"
                         />
-                      </TableCell>
-                      <TableCell className="p-2">
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-gray-500 font-semibold mb-0.5 block">Rate (₹)</Label>
                         <Input 
                           type="number"
                           value={item.rate !== undefined && item.rate !== null && !Number.isNaN(item.rate) ? item.rate : ''} 
                           onChange={(e) => updateItem(idx, 'rate', parseFloat(e.target.value))}
-                          className="h-8 text-sm w-20"
+                          className="h-8 text-xs font-bold text-center"
+                          placeholder="0.00"
                         />
-                      </TableCell>
-                      <TableCell className="p-2">
-                        <span className="text-sm font-medium px-2">₹{Number(item.amount || 0).toFixed(2)}</span>
-                      </TableCell>
-                      <TableCell className="p-2 text-right">
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+                      </div>
+                      <div>
+                        <Label className="text-[10px] text-gray-500 font-semibold mb-0.5 block text-right">Amount</Label>
+                        <div className="h-8 flex items-center justify-end px-2 bg-gray-50 rounded-md border text-xs font-black text-gray-900">
+                          ₹{Number(item.amount || 0).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 2. Desktop Table (Visible on >= sm screens) */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-gray-50/80">
+                    <TableRow>
+                      <TableHead className="w-[45%] font-bold text-xs">Description</TableHead>
+                      <TableHead className="font-bold text-xs text-center">Qty</TableHead>
+                      <TableHead className="font-bold text-xs text-center">Rate</TableHead>
+                      <TableHead className="font-bold text-xs text-right">Amount</TableHead>
+                      <TableHead className="w-[40px]"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.items?.map((item: any, idx: number) => (
+                      <TableRow key={idx}>
+                        <TableCell className="p-2">
+                          <Input 
+                            value={item.description || ''} 
+                            onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                            placeholder="Item name / description"
+                            className="h-8 text-xs font-medium"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input 
+                            type="number"
+                            value={item.quantity !== undefined && item.quantity !== null && !Number.isNaN(item.quantity) ? item.quantity : ''} 
+                            onChange={(e) => updateItem(idx, 'quantity', parseFloat(e.target.value))}
+                            className="h-8 text-xs w-16 text-center mx-auto"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input 
+                            type="number"
+                            value={item.rate !== undefined && item.rate !== null && !Number.isNaN(item.rate) ? item.rate : ''} 
+                            onChange={(e) => updateItem(idx, 'rate', parseFloat(e.target.value))}
+                            className="h-8 text-xs w-20 text-center mx-auto"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2 text-right">
+                          <span className="text-xs font-bold px-2 text-gray-900">₹{Number(item.amount || 0).toFixed(2)}</span>
+                        </TableCell>
+                        <TableCell className="p-2 text-right">
+                          <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
 
           {/* Totals & Actions Card */}
           <Card className="border-0 shadow-sm ring-1 ring-gray-100">
-             <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-              <CardTitle className="text-sm font-medium">Summary & Total</CardTitle>
+             <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-3.5 px-4 sm:px-6">
+              <CardTitle className="text-sm font-bold text-gray-900">Summary & Total</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-               <div className="space-y-3 max-w-sm ml-auto">
-                 <div className="flex justify-between items-center text-sm">
-                   <span className="text-gray-500">Subtotal</span>
-                   <span className="font-medium">₹{Number(data.subtotal || 0).toFixed(2)}</span>
+            <CardContent className="p-4 sm:p-6">
+               <div className="space-y-2.5 max-w-sm ml-auto">
+                 <div className="flex justify-between items-center text-xs text-gray-600">
+                   <span>Subtotal</span>
+                   <span className="font-semibold text-gray-900">₹{Number(data.subtotal || 0).toFixed(2)}</span>
                  </div>
-                 <div className="flex justify-between items-center text-sm">
-                   <span className="text-gray-500">Discount (₹)</span>
+                 <div className="flex justify-between items-center text-xs text-gray-600">
+                   <span>Discount (₹)</span>
                    <Input 
                       type="number"
-                      className="w-24 h-8 text-right"
+                      className="w-24 h-8 text-right text-xs"
                       value={data.discount || ''}
                       onChange={(e) => updateField('discount', parseFloat(e.target.value))}
                    />
                  </div>
-                 <div className="flex justify-between items-center text-sm">
-                   <span className="text-gray-500">Tax Amount (₹)</span>
+                 <div className="flex justify-between items-center text-xs text-gray-600">
+                   <span>Tax Amount (₹)</span>
                    <Input 
                       type="number"
-                      className="w-24 h-8 text-right"
+                      className="w-24 h-8 text-right text-xs"
                       value={data.taxAmount || ''}
                       onChange={(e) => updateField('taxAmount', parseFloat(e.target.value))}
                    />
                  </div>
                  <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-                   <span className="font-bold text-gray-900">Grand Total</span>
-                   <span className="font-bold text-lg text-black">₹{Number(data.grandTotal || 0).toFixed(2)}</span>
+                   <span className="font-black text-sm text-gray-900">Grand Total</span>
+                   <span className="font-black text-lg text-black">₹{Number(data.grandTotal || 0).toFixed(2)}</span>
                  </div>
                </div>
                
-               <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
+               <div className="mt-6 pt-4 border-t border-gray-100 flex justify-end">
                  <Button 
                    onClick={handleGenerateInvoice} 
                    disabled={isSaving}
-                   className="h-12 px-8 bg-black hover:bg-gray-800 text-white w-full sm:w-auto font-medium"
+                   className="h-11 px-8 bg-black hover:bg-gray-800 text-white w-full sm:w-auto font-bold text-xs shadow-sm transition-transform active:scale-95"
                  >
                    {isSaving ? (
                      <>
