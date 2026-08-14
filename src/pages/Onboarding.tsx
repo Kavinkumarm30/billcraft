@@ -27,7 +27,7 @@ export default function Onboarding() {
       const token = await getToken();
       
       const payload = isSkip ? {} : Object.fromEntries(
-        Object.entries(formData).filter(([_, v]) => v.trim() !== '')
+        Object.entries(formData).filter(([_, v]) => String(v || '').trim() !== '')
       );
 
       const response = await fetch('/api/onboarding', {

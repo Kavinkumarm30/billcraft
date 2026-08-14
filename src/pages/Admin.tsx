@@ -405,7 +405,7 @@ export default function Admin() {
                       <Button
                         onClick={() => {
                           setSelectedRequest(req);
-                          setCustomLayoutDesign(defaultCanvaDesign);
+                          setSelectedLayoutForUser('orange-classic');
                           setIsDesignModalOpen(true);
                         }}
                         className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm"
