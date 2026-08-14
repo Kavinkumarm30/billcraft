@@ -145,53 +145,62 @@ const PORT = 3000;
       
       const base64Image = req.file.buffer.toString("base64");
       
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inlineData: {
-                  mimeType: req.file.mimetype,
-                  data: base64Image,
-                }
-              },
-              {
-                text: `Extract the details from this handwritten or printed bill/invoice into structured JSON format.
-                
-                Follow this exact JSON structure:
-                {
-                  "customerName": "string",
-                  "phone": "string",
-                  "address": "string",
-                  "invoiceNumber": "string",
-                  "date": "string (YYYY-MM-DD)",
-                  "items": [
-                    {
-                      "description": "string",
-                      "quantity": number,
-                      "rate": number,
-                      "amount": number
-                    }
-                  ],
-                  "subtotal": number,
-                  "discount": number,
-                  "taxAmount": number,
-                  "grandTotal": number,
-                  "notes": "string"
-                }
-                
-                Respond ONLY with valid JSON. No markdown tags. Do your best to transcribe the handwriting.`
-              }
-            ]
+      let response;
+      const promptParts = [
+        {
+          inlineData: {
+            mimeType: req.file.mimetype,
+            data: base64Image,
           }
-        ],
-        config: {
-            temperature: 0.1,
-            responseMimeType: "application/json",
+        },
+        {
+          text: `Extract the details from this handwritten or printed bill/invoice into structured JSON format.
+          
+          Follow this exact JSON structure:
+          {
+            "customerName": "string",
+            "phone": "string",
+            "address": "string",
+            "invoiceNumber": "string",
+            "date": "string (YYYY-MM-DD)",
+            "items": [
+              {
+                "description": "string",
+                "quantity": number,
+                "rate": number,
+                "amount": number
+              }
+            ],
+            "subtotal": number,
+            "discount": number,
+            "taxAmount": number,
+            "grandTotal": number,
+            "notes": "string"
+          }
+          
+          Respond ONLY with valid JSON. No markdown tags. Do your best to transcribe the handwriting.`
         }
-      });
+      ];
+
+      const modelConfig = {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+      };
+
+      try {
+        response = await ai.models.generateContent({
+          model: "gemini-flash-latest",
+          contents: [{ role: "user", parts: promptParts }],
+          config: modelConfig
+        });
+      } catch (firstErr) {
+        console.warn("Primary model gemini-flash-latest failed, trying fallback gemini-2.5-flash-lite:", firstErr);
+        response = await ai.models.generateContent({
+          model: "gemini-2.5-flash-lite",
+          contents: [{ role: "user", parts: promptParts }],
+          config: modelConfig
+        });
+      }
       
       let resultText = response.text;
       if (!resultText) {

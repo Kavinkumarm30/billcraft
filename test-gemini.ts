@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 async function run() {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-flash-latest",
       contents: [
         {
           role: "user",
@@ -26,7 +26,7 @@ async function run() {
           responseMimeType: "application/json",
       }
     });
-    console.log("Success:", response.text);
+    console.log("Success with gemini-flash-latest:", response.text);
   } catch (error) {
     console.error("Error:", error);
   }
