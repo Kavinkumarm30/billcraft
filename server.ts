@@ -525,6 +525,77 @@ const PORT = 3000;
 
   
 
+  // Settings endpoints
+  app.get("/api/settings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      const orgs = await db.select().from(organizations).where(eq(organizations.id, u.orgId));
+      let settingsList = await db.select().from(companySettings).where(eq(companySettings.orgId, u.orgId));
+
+      if (settingsList.length === 0) {
+        const newSettings = await db.insert(companySettings).values({
+          orgId: u.orgId,
+          invoiceLayout: 'standard'
+        }).returning();
+        settingsList = newSettings;
+      }
+
+      const org = orgs[0] || { name: 'My Company' };
+      const currentSettings = settingsList[0];
+
+      res.json({
+        companyName: org.name || 'My Company',
+        ...currentSettings
+      });
+    } catch (error: any) {
+      console.error("Fetch settings error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/settings", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      const { companyName, ...settingData } = req.body;
+
+      if (companyName) {
+        await db.update(organizations)
+          .set({ name: companyName, updatedAt: new Date() })
+          .where(eq(organizations.id, u.orgId));
+      }
+
+      const existingSettings = await db.select().from(companySettings).where(eq(companySettings.orgId, u.orgId));
+      
+      let updatedSettings;
+      if (existingSettings.length === 0) {
+        updatedSettings = await db.insert(companySettings).values({
+          orgId: u.orgId,
+          ...settingData,
+        }).returning();
+      } else {
+        updatedSettings = await db.update(companySettings)
+          .set({
+            ...settingData,
+            updatedAt: new Date()
+          })
+          .where(eq(companySettings.orgId, u.orgId))
+          .returning();
+      }
+
+      res.json({
+        companyName: companyName || (await db.select().from(organizations).where(eq(organizations.id, u.orgId)))[0]?.name,
+        ...updatedSettings[0]
+      });
+    } catch (error: any) {
+      console.error("Update settings error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Onboarding endpoint
   app.post("/api/onboarding", requireAuth, async (req: AuthRequest, res) => {
     try {

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Printer, Download, Save, ArrowLeft, Building2, Share2, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomMonishaLayout } from '../pages/CustomMonishaLayout';
+import { defaultLayoutConfig, LayoutConfig } from '../pages/Settings';
 
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
@@ -13,12 +14,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 
-
 export default function InvoicePreview() {
   const navigate = useNavigate();
   const location = useLocation();
   const isReadOnly = location.state?.isReadOnly;
-  const { user, getToken } = useAuth();
+  const { getToken } = useAuth();
   const [data, setData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -79,8 +79,6 @@ export default function InvoicePreview() {
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, [data]);
-
-
 
   const handleShare = async () => {
     if (!invoiceRef.current) return;
@@ -160,21 +158,18 @@ export default function InvoicePreview() {
     const loadingToast = toast.loading('Generating PDF...');
     
     try {
-      // Temporarily remove scaling from parent so the resolution is full
       const parent = invoiceRef.current.parentElement;
       const originalTransform = parent ? parent.style.transform : '';
       if (parent) parent.style.transform = 'none';
 
-      // Small delay to allow browser to apply transform=none before capturing
       await new Promise(r => setTimeout(r, 100));
 
       const dataUrl = await toPng(invoiceRef.current, {
         quality: 1,
-        pixelRatio: 2, // Higher resolution for crisp text
+        pixelRatio: 2,
         skipFonts: false,
       });
       
-      // Restore scaling
       if (parent) parent.style.transform = originalTransform;
 
       // A4 dimensions in mm
@@ -236,8 +231,7 @@ export default function InvoicePreview() {
     }
   };
 
-    const isIframe = window !== window.parent;
-  
+  const isIframe = window !== window.parent;
 
   const executePrint = () => {
     if (isIframe) {
@@ -252,107 +246,28 @@ export default function InvoicePreview() {
   };
 
   if (!data) return null;
-  const layout = settings?.invoiceLayout || 'standard';
 
-  
-  const getStyles = (l: string) => {
-    const base = {
-      fontFamily: '',
-      wrapper: 'bg-white p-8 sm:p-12 border shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 border-gray-200',
-      headerContainer: 'flex items-start pb-8 mb-8 justify-between border-b border-gray-200',
-      headerLeft: 'flex items-center gap-3',
-      logoBox: 'h-12 w-12 rounded-xl flex items-center justify-center shadow-sm bg-black text-white',
-      logoIcon: 'h-6 w-6 text-white',
-      companyName: 'text-2xl font-bold tracking-tight text-gray-900',
-      companyText: 'text-sm text-gray-500',
-      headerRight: 'space-y-1 flex flex-col items-end text-right',
-      invoiceTitle: 'text-3xl font-bold tracking-tight uppercase tracking-wider text-black/10',
-      invoiceText: 'font-semibold text-gray-900',
-      invoiceDate: 'text-sm text-gray-500',
-      paidBadge: 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 font-bold rounded-full border border-green-200',
-      billedTo: 'mb-12',
-      tableHeader: 'border-b border-gray-200',
-      tableTh: 'py-3 font-semibold text-gray-900',
-      tableRow: 'border-b border-gray-100 last:border-0',
-      totalsBorder: 'flex justify-end pt-6 border-t border-gray-200',
-      notesBorder: 'mt-12 pt-8 border-t border-gray-100',
-      footerBorder: 'mt-8 pt-8 border-t border-gray-200 flex justify-between items-center text-sm text-gray-500'
-    };
+  // Parse user's custom layout config
+  let layoutConfig: LayoutConfig = defaultLayoutConfig;
+  const rawLayout = settings?.invoiceLayout || 'standard';
 
-    if (l === 'minimal') {
-      base.headerContainer = 'flex items-start pb-8 mb-8 flex-col items-center text-center gap-6 border-b border-gray-200';
-      base.headerLeft = 'flex flex-col items-center gap-3';
-      base.headerRight = 'space-y-1 flex flex-col items-center text-center w-full';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 font-bold rounded-full border border-green-200';
-      base.billedTo = 'mb-12 text-center';
-    } else if (l === 'modern') {
-      base.headerContainer = 'flex items-start pb-8 mb-8 flex-row-reverse justify-between text-right border-b border-gray-200';
-      base.headerLeft = 'flex flex-row-reverse items-center gap-3';
-      base.headerRight = 'space-y-1 flex flex-col items-start text-left';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 font-bold rounded-full border border-green-200';
-    } else if (l === 'professional') {
-      base.headerContainer = 'flex items-start justify-between bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8';
-      base.wrapper = 'bg-white p-8 sm:p-12 border shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 border-gray-300';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 font-bold rounded border border-green-300 shadow-sm';
-    } else if (l === 'bold') {
-      base.headerContainer = 'flex items-start justify-between bg-black text-white p-8 rounded-xl mb-8';
-      base.wrapper = 'bg-white p-8 sm:p-12 border shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 border-black';
-      base.logoBox = 'h-12 w-12 rounded-xl flex items-center justify-center shadow-sm bg-white text-black';
-      base.logoIcon = 'h-6 w-6 text-black';
-      base.companyName = 'text-2xl font-bold tracking-tight text-white';
-      base.companyText = 'text-sm text-gray-300';
-      base.invoiceTitle = 'text-3xl font-bold tracking-tight uppercase tracking-wider text-white/20';
-      base.invoiceText = 'font-semibold text-white';
-      base.invoiceDate = 'text-sm text-gray-400';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-500 text-black font-black rounded-sm tracking-wider uppercase';
-    } else if (l === 'elegant') {
-      base.fontFamily = 'font-serif';
-      base.wrapper = 'bg-[#faf9f6] p-8 sm:p-12 border-2 border-double border-gray-300 shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0';
-      base.headerContainer = 'flex items-start pb-8 mb-8 justify-between border-b-2 border-double border-gray-300';
-      base.logoBox = 'h-12 w-12 rounded-full flex items-center justify-center shadow-sm bg-stone-800 text-stone-100';
-      base.totalsBorder = 'flex justify-end pt-6 border-t-2 border-double border-gray-300';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-4 py-1 bg-transparent text-green-800 font-bold border border-green-800 rounded-full tracking-widest uppercase';
-    } else if (l === 'tech') {
-      base.fontFamily = 'font-mono';
-      base.wrapper = 'bg-white p-8 sm:p-12 border shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 border-blue-200';
-      base.headerContainer = 'flex items-start pb-8 mb-8 justify-between border-b border-blue-200';
-      base.logoBox = 'h-12 w-12 rounded flex items-center justify-center bg-blue-600 text-white';
-      base.invoiceTitle = 'text-3xl font-bold tracking-tight uppercase tracking-wider text-blue-100';
-      base.companyName = 'text-2xl font-bold tracking-tight text-blue-900';
-      base.totalsBorder = 'flex justify-end pt-6 border-t border-blue-200';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/10 text-green-600 font-bold border border-green-500/30 rounded-none uppercase tracking-widest';
-    } else if (l === 'corporate') {
-      base.headerContainer = 'flex items-start justify-between bg-slate-800 text-white p-8 mb-8';
-      base.wrapper = 'bg-white sm:p-12 p-8 shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 border border-slate-300';
-      base.logoBox = 'h-12 w-12 rounded flex items-center justify-center bg-white text-slate-800';
-      base.logoIcon = 'h-6 w-6 text-slate-800';
-      base.companyName = 'text-2xl font-bold tracking-tight text-white';
-      base.companyText = 'text-sm text-slate-300';
-      base.invoiceTitle = 'text-3xl font-bold tracking-tight uppercase tracking-wider text-white/20';
-      base.invoiceText = 'font-semibold text-white';
-      base.invoiceDate = 'text-sm text-slate-300';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-600 text-white font-bold rounded shadow-sm';
-    } else if (l === 'playful') {
-      base.wrapper = 'bg-amber-50/30 p-8 sm:p-12 border-4 border-amber-200 rounded-3xl shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0';
-      base.headerContainer = 'flex items-start pb-8 mb-8 justify-between border-b-4 border-dashed border-amber-200';
-      base.logoBox = 'h-12 w-12 rounded-2xl flex items-center justify-center bg-amber-400 text-amber-900 shadow-sm';
-      base.invoiceTitle = 'text-3xl font-black tracking-tight uppercase tracking-wider text-amber-200';
-      base.companyName = 'text-2xl font-black tracking-tight text-amber-900';
-      base.totalsBorder = 'flex justify-end pt-6 border-t-4 border-dashed border-amber-200';
-      base.footerBorder = 'mt-8 pt-8 border-t-4 border-dashed border-amber-200 flex justify-between items-center text-sm text-amber-700/50';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-4 py-1.5 bg-green-400 text-green-950 font-black rounded-full shadow-sm border-2 border-green-500 transform -rotate-2';
-    } else if (l === 'classic') {
-      base.wrapper = 'bg-white p-8 sm:p-12 border shadow-sm w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 border-gray-400';
-      base.headerContainer = 'flex items-end pb-8 mb-8 justify-between border-b border-gray-400';
-      base.invoiceTitle = 'text-4xl font-normal tracking-tight uppercase tracking-widest text-gray-300';
-      base.totalsBorder = 'flex justify-end pt-6 border-t border-gray-400';
-      base.paidBadge = 'mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-white text-green-800 font-bold border-2 border-green-800 uppercase tracking-widest';
+  if (rawLayout.startsWith('{')) {
+    try {
+      layoutConfig = { ...defaultLayoutConfig, ...JSON.parse(rawLayout) };
+    } catch (e) {
+      console.error(e);
     }
-    
-    return base;
-  };
+  } else if (rawLayout === 'orange-classic') {
+    layoutConfig = {
+      ...defaultLayoutConfig,
+      primaryColor: '#ea580c',
+      fontFamily: 'serif',
+      borderStyle: 'double',
+      tableHeaderStyle: 'accent'
+    };
+  }
 
-  const s = getStyles(layout);
+  const isCustomMonisha = rawLayout === 'orange-classic';
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 print:p-0 print:m-0 print:space-y-0">
@@ -383,8 +298,8 @@ export default function InvoicePreview() {
               <Share2 className="mr-2 h-4 w-4" /> Share
             </Button>
           )}
-          {!isReadOnly && <Button onClick={openPaymentModal} disabled={isSaving} className="flex-1 sm:flex-none bg-black hover:bg-gray-800">
-            <Save className="mr-2 h-4 w-4" /> {isSaving ? 'Saving...' : 'Save & Issue'}
+          {!isReadOnly && <Button onClick={openPaymentModal} disabled={isSaving} className="flex-1 sm:flex-none bg-black hover:bg-gray-800 text-white">
+            <Save className="mr-2 h-4 w-4" /> {isSaving ? 'Saving...' : 'Update & Issue'}
           </Button>}
         </div>
       </div>
@@ -407,117 +322,234 @@ export default function InvoicePreview() {
         >
           <div 
             ref={invoiceRef}
-            className={layout === 'orange-classic' ? "print-override bg-white overflow-hidden" : `${s.wrapper} ${s.fontFamily}`}
+            className={`bg-white p-8 sm:p-12 w-full min-h-[1131px] relative print:border-none print:shadow-none print:p-8 print:m-0 print:min-w-0 print:min-h-0 ${
+              layoutConfig.fontFamily === 'serif' ? 'font-serif' : 
+              layoutConfig.fontFamily === 'mono' ? 'font-mono' : 'font-sans'
+            } ${
+              layoutConfig.borderStyle === 'double' ? 'border-[3px] border-double shadow-sm' : 
+              layoutConfig.borderStyle === 'rounded' ? 'border-2 rounded-2xl shadow-sm' : 
+              layoutConfig.borderStyle === 'clean' ? 'border-0 shadow-none' : 'border shadow-sm'
+            }`}
+            style={{ borderColor: layoutConfig.primaryColor }}
           >
-            {layout === 'orange-classic' ? (
-               <CustomMonishaLayout data={data} settings={settings} />
+            {isCustomMonisha ? (
+              <CustomMonishaLayout data={data} settings={settings} />
             ) : (
               <>
-          <div className={s.headerContainer}>
-          <div className={s.headerLeft}>
-             {settings?.logoUrl ? (
-               <img src={settings.logoUrl} alt="Logo" className="h-16 object-contain" />
-             ) : (
-               <div className={s.logoBox}>
-                 <Building2 className={s.logoIcon} />
-               </div>
-             )}
-             <div>
-               <h1 className={s.companyName}>{settings?.companyName || 'Your Company Name'}</h1>
-               {settings?.address && <p className={s.companyText}>{settings.address}</p>}
-               {settings?.gstNo && <p className={s.companyText}>GST: {settings.gstNo}</p>}
-             </div>
-          </div>
-          <div className={s.headerRight}>
-            <h2 className={s.invoiceTitle}>INVOICE</h2>
-            <p className={s.invoiceText}>Invoice No: {data.invoiceNumber || Date.now().toString().slice(-6)}</p>
-            <p className={s.invoiceDate}>Date: {(data.date && data.date.includes('T') ? data.date.split('T')[0] : data.date) || new Date().toISOString().split('T')[0]}</p>
-            {data.status === 'PAID' && (
-              <div className="flex flex-col gap-1 mt-2 w-full">
-                <div className={s.paidBadge}>
-                  <CheckCircle className="w-4 h-4" />
-                  <span>PAID</span>
-                </div>
-                {data.paymentMethod && (
-                  <p className="text-xs text-gray-500 mt-1">Paid via {data.paymentMethod} {data.paymentReference ? `(${data.paymentReference})` : ''}</p>
-                )}
-              </div>
+                {/* Dynamically Rendered Sections according to Customizer Order */}
+                {layoutConfig.sectionOrder.map((sectionId) => {
+                  
+                  // SECTION 1: HEADER
+                  if (sectionId === 'header') {
+                    return (
+                      <div 
+                        key="header"
+                        className={`pb-8 mb-8 border-b flex ${
+                          layoutConfig.headerAlignment === 'center' ? 'flex-col items-center text-center gap-4' :
+                          layoutConfig.headerAlignment === 'right' ? 'flex-row-reverse justify-between text-right' :
+                          layoutConfig.headerAlignment === 'left' ? 'flex-col items-start gap-4' :
+                          'justify-between items-start'
+                        }`}
+                        style={{ borderColor: layoutConfig.primaryColor + '30' }}
+                      >
+                        {/* Company Details */}
+                        <div className={`flex items-center gap-4 ${layoutConfig.headerAlignment === 'center' ? 'flex-col' : ''}`}>
+                          {layoutConfig.showLogo && (
+                            settings?.logoUrl ? (
+                              <img src={settings.logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-lg" />
+                            ) : (
+                              <div 
+                                className="h-14 w-14 rounded-xl flex items-center justify-center text-white shadow-sm font-bold text-lg"
+                                style={{ backgroundColor: layoutConfig.primaryColor }}
+                              >
+                                {settings?.companyName ? settings.companyName.slice(0, 2).toUpperCase() : <Building2 className="h-7 w-7" />}
+                              </div>
+                            )
+                          )}
+                          <div>
+                            <h1 className="text-2xl font-bold tracking-tight" style={{ color: layoutConfig.primaryColor }}>
+                              {settings?.companyName || 'Your Company Name'}
+                            </h1>
+                            {layoutConfig.showAddress && settings?.address && (
+                              <p className="text-sm text-gray-500 mt-0.5">{settings.address}</p>
+                            )}
+                            {layoutConfig.showPhone && settings?.phone && (
+                              <p className="text-xs text-gray-500">Phone: {settings.phone}</p>
+                            )}
+                            {layoutConfig.showGst && settings?.gstNo && (
+                              <p className="text-xs font-semibold text-gray-600">GST: {settings.gstNo}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Invoice Meta */}
+                        <div className={`space-y-1 ${layoutConfig.headerAlignment === 'center' ? 'text-center' : 'text-right'}`}>
+                          <h2 
+                            className="text-3xl font-black uppercase tracking-wider opacity-85"
+                            style={{ color: layoutConfig.primaryColor }}
+                          >
+                            INVOICE
+                          </h2>
+                          <p className="font-semibold text-gray-900 text-sm">
+                            Invoice No: {data.invoiceNumber || Date.now().toString().slice(-6)}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Date: {(data.date && data.date.includes('T') ? data.date.split('T')[0] : data.date) || new Date().toISOString().split('T')[0]}
+                          </p>
+                          {data.status === 'PAID' ? (
+                            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 font-bold rounded-full border border-green-200 text-xs">
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              <span>PAID</span>
+                            </div>
+                          ) : (
+                            <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-700 font-bold rounded-full border border-orange-200 text-xs">
+                              <span>PENDING</span>
+                            </div>
+                          )}
+                          {data.paymentMethod && (
+                            <p className="text-xs text-gray-500 mt-1">Paid via {data.paymentMethod} {data.paymentReference ? `(${data.paymentReference})` : ''}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // SECTION 2: BILLED TO
+                  if (sectionId === 'billed_to') {
+                    return (
+                      <div key="billed_to" className="mb-8">
+                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To</h3>
+                        <div className="text-gray-900">
+                          <p className="font-bold text-lg">{data.customerName || 'Walk-in Customer'}</p>
+                          {data.address && <p className="text-sm mt-1 text-gray-600 whitespace-pre-wrap">{data.address}</p>}
+                          {data.phone && <p className="text-sm mt-0.5 text-gray-600">Phone: {data.phone}</p>}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // SECTION 3: ITEMS TABLE
+                  if (sectionId === 'table') {
+                    return (
+                      <div key="table" className="mb-8">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr 
+                              className="border-b"
+                              style={{
+                                backgroundColor: layoutConfig.tableHeaderStyle === 'accent' ? layoutConfig.primaryColor :
+                                                 layoutConfig.tableHeaderStyle === 'dark' ? '#18181b' :
+                                                 layoutConfig.tableHeaderStyle === 'light' ? '#f3f4f6' : 'transparent',
+                                color: (layoutConfig.tableHeaderStyle === 'accent' || layoutConfig.tableHeaderStyle === 'dark') ? '#ffffff' : '#1f2937'
+                              }}
+                            >
+                              <th className="py-2.5 px-3 font-semibold text-sm w-[50%]">Item Description</th>
+                              <th className="py-2.5 px-3 font-semibold text-sm text-center">Qty</th>
+                              <th className="py-2.5 px-3 font-semibold text-sm text-right">Rate</th>
+                              <th className="py-2.5 px-3 font-semibold text-sm text-right">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-sm">
+                            {data.items?.map((item: any, i: number) => (
+                              <tr key={i} className="hover:bg-gray-50/50">
+                                <td className="py-2 px-3 text-gray-800 font-medium">{item.description || '-'}</td>
+                                <td className="py-2 px-3 text-gray-600 text-center">{item.quantity} {item.unit || ''}</td>
+                                <td className="py-2 px-3 text-gray-600 text-right">₹{Number(item.rate || 0).toFixed(2)}</td>
+                                <td className="py-2 px-3 text-gray-900 font-semibold text-right">₹{Number(item.amount || 0).toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  }
+
+                  // SECTION 4: TOTALS & SUMMARY
+                  if (sectionId === 'totals') {
+                    return (
+                      <div key="totals" className="flex justify-end pt-4 mb-8 border-t border-gray-200">
+                        <div className="w-full max-w-xs space-y-2 text-sm">
+                          <div className="flex justify-between text-gray-600">
+                            <span>Subtotal</span>
+                            <span className="font-medium">₹{Number(data.subtotal || 0).toFixed(2)}</span>
+                          </div>
+                          {Number(data.discount) > 0 && (
+                            <div className="flex justify-between text-gray-600">
+                              <span>Discount</span>
+                              <span className="text-red-500 font-medium">-₹{Number(data.discount).toFixed(2)}</span>
+                            </div>
+                          )}
+                          {Number(data.taxAmount) > 0 && (
+                            <div className="flex justify-between text-gray-600">
+                              <span>Tax</span>
+                              <span className="font-medium">₹{Number(data.taxAmount).toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div 
+                            className="flex justify-between font-bold text-lg pt-3 border-t mt-2"
+                            style={{ borderColor: layoutConfig.primaryColor, color: layoutConfig.primaryColor }}
+                          >
+                            <span>Total Amount</span>
+                            <span>₹{Number(data.grandTotal || 0).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // SECTION 5: BANK & PAYMENT DETAILS
+                  if (sectionId === 'bank_details') {
+                    if (!layoutConfig.showBankDetails && !settings?.bankName && !settings?.upiId) return null;
+                    return (
+                      <div key="bank_details" className="p-4 rounded-xl bg-gray-50 border border-gray-200 mb-8 text-xs">
+                        <h4 className="font-bold text-gray-800 uppercase tracking-wider mb-2">Bank & Payment Information</h4>
+                        <div className="grid grid-cols-2 gap-2 text-gray-600">
+                          {settings?.bankName && <div>Bank: <span className="font-medium text-gray-900">{settings.bankName}</span></div>}
+                          {settings?.accountNo && <div>Account No: <span className="font-medium text-gray-900">{settings.accountNo}</span></div>}
+                          {settings?.ifsc && <div>IFSC Code: <span className="font-medium text-gray-900">{settings.ifsc}</span></div>}
+                          {settings?.upiId && <div>UPI ID: <span className="font-medium text-gray-900">{settings.upiId}</span></div>}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // SECTION 6: NOTES & SIGNATURE
+                  if (sectionId === 'notes_signature') {
+                    return (
+                      <div key="notes_signature" className="mt-8 pt-6 border-t border-gray-200">
+                        {layoutConfig.showNotes && data.notes && (
+                          <div className="mb-6">
+                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Notes & Terms</h4>
+                            <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.notes}</p>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-end pt-4">
+                          {layoutConfig.showFooterMessage && (
+                            <p className="text-sm font-semibold" style={{ color: layoutConfig.primaryColor }}>
+                              {layoutConfig.footerMessage || 'Thank you for your business!'}
+                            </p>
+                          )}
+
+                          {layoutConfig.showSignature && (
+                            <div className="text-center">
+                              <div className="w-36 border-b border-gray-400 mb-2"></div>
+                              <span className="text-xs text-gray-500 font-medium block">
+                                {layoutConfig.signatureText || 'Authorized Signature'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })}
+              </>
             )}
           </div>
         </div>
-
-        <div className={s.billedTo}>
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Billed To</h3>
-          <div className="text-gray-900">
-            <p className="font-bold text-lg">{data.customerName || ''}</p>
-            {data.address && <p className="text-sm mt-1 whitespace-pre-wrap">{data.address}</p>}
-            {data.phone && <p className="text-sm mt-1">Phone: {data.phone}</p>}
-          </div>
-        </div>
-
-        <table className="w-full text-left mb-8">
-          <thead>
-            <tr className={s.tableHeader}>
-              <th className={`${s.tableTh} w-[50%]`}>Item Description</th>
-              <th className={`${s.tableTh} text-center`}>Qty</th>
-              <th className={`${s.tableTh} text-right`}>Rate</th>
-              <th className={`${s.tableTh} text-right`}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items?.map((item, i) => (
-              <tr key={i} className={s.tableRow}>
-                <td className="py-1.5 text-gray-700">{item.description || '-'}</td>
-                <td className="py-1.5 text-gray-700 text-center">{item.quantity} {item.unit}</td>
-                <td className="py-1.5 text-gray-700 text-right">₹{Number(item.rate).toFixed(2)}</td>
-                <td className="py-1.5 text-gray-900 font-medium text-right">₹{Number(item.amount).toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className={s.totalsBorder}>
-          <div className="w-full max-w-sm space-y-3">
-            <div className="flex justify-between text-gray-600 text-sm">
-              <span>Subtotal</span>
-              <span>₹{Number(data.subtotal || 0).toFixed(2)}</span>
-            </div>
-            {data.discount > 0 && (
-              <div className="flex justify-between text-gray-600 text-sm">
-                <span>Discount</span>
-                <span className="text-red-500">-₹{Number(data.discount).toFixed(2)}</span>
-              </div>
-            )}
-            {data.taxAmount > 0 && (
-              <div className="flex justify-between text-gray-600 text-sm">
-                <span>Tax</span>
-                <span>₹{Number(data.taxAmount).toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-gray-900 font-bold text-lg pt-3 border-t border-gray-200 mt-3">
-              <span>Total Amount</span>
-              <span className="text-black">₹{Number(data.grandTotal || 0).toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
-        
-        {data.notes && (
-           <div className={s.notesBorder}>
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Notes</h3>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{data.notes}</p>
-           </div>
-        )}
-
-        <div className={s.footerBorder}>
-          <p>Thank you for your business!</p>
-          <div className="text-xs text-gray-400 opacity-50 select-none">
-            Generated by JenG Film Studio
-          </div>
-        </div>
-          </>
-        )}
-      </div>
-      </div>
       </div>
       
       {/* Global Print Styles */}
