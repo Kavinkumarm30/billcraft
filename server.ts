@@ -402,7 +402,7 @@ Ensure all coordinates (x: 20-760, y: 20-1000) are realistic, non-overlapping, a
         responseMimeType: "application/json",
       };
 
-      const modelChain = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-latest"];
+      const modelChain = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-flash-latest"];
       let response;
       let lastError;
 
@@ -427,17 +427,62 @@ Ensure all coordinates (x: 20-760, y: 20-1000) are realistic, non-overlapping, a
         throw lastError || new Error("Failed to extract layout design from AI model");
       }
 
-      let resultText = response.text;
-      resultText = resultText.replace(/^\s*```(json)?/i, '').replace(/```\s*$/, '').trim();
-
-      const parsedLayout = JSON.parse(resultText);
-
-      // Validate and ensure all required elements exist
-      if (!parsedLayout.elements || !Array.isArray(parsedLayout.elements)) {
-        throw new Error("Invalid layout structure returned by AI");
+      let resultText = response.text || '';
+      const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        resultText = jsonMatch[0];
+      } else {
+        resultText = resultText.replace(/^\s*```(json)?/i, '').replace(/```\s*$/, '').trim();
       }
 
-      res.json(parsedLayout);
+      let parsedLayout: any;
+      try {
+        parsedLayout = JSON.parse(resultText);
+      } catch (e) {
+        console.error("JSON parse failed on resultText:", resultText);
+        throw new Error("Invalid layout format returned by AI");
+      }
+
+      // Default elements structure for guarantee
+      const defaultElements = [
+        { id: 'company_header', name: 'Company Header & Logo', type: 'company_header', x: 40, y: 40, width: 400, fontSize: 14, textColor: '#18181b', bgColor: 'transparent', textAlign: 'left', fontWeight: 'bold', visible: true },
+        { id: 'invoice_meta', name: 'Invoice Title & Meta', type: 'invoice_meta', x: 480, y: 40, width: 280, fontSize: 13, textColor: '#18181b', bgColor: 'transparent', textAlign: 'right', fontWeight: 'bold', visible: true },
+        { id: 'billed_to', name: 'Billed To (Customer Details)', type: 'billed_to', x: 40, y: 160, width: 720, fontSize: 13, textColor: '#1f2937', bgColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 12, padding: 16, textAlign: 'left', visible: true },
+        { id: 'items_table', name: 'Products & Items Table', type: 'items_table', x: 40, y: 290, width: 720, fontSize: 13, textColor: '#1f2937', bgColor: '#ffffff', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 8, textAlign: 'left', visible: true },
+        { id: 'totals_card', name: 'Subtotal & Grand Total', type: 'totals_card', x: 480, y: 540, width: 280, fontSize: 13, textColor: '#111827', bgColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 12, padding: 16, textAlign: 'right', visible: true },
+        { id: 'bank_details', name: 'Bank & UPI Payment Info', type: 'bank_details', x: 40, y: 540, width: 410, fontSize: 12, textColor: '#374151', bgColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 12, padding: 16, textAlign: 'left', visible: true },
+        { id: 'notes_terms', name: 'Notes & Terms', type: 'notes_terms', x: 40, y: 690, width: 440, fontSize: 12, textColor: '#6b7280', bgColor: 'transparent', textAlign: 'left', visible: true },
+        { id: 'signature_block', name: 'Authorized Signature', type: 'signature_block', x: 520, y: 690, width: 240, fontSize: 12, textColor: '#4b5563', bgColor: 'transparent', textAlign: 'center', visible: true }
+      ];
+
+      // Normalize elements array
+      const rawElements = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
+      const finalElements = defaultElements.map(def => {
+        const found = rawElements.find((el: any) => el.type === def.type || el.id === def.id);
+        if (!found) return def;
+        return {
+          ...def,
+          ...found,
+          x: Math.max(10, Math.min(780, Number(found.x) || def.x)),
+          y: Math.max(10, Math.min(1050, Number(found.y) || def.y)),
+          width: Math.max(120, Math.min(780, Number(found.width) || def.width)),
+          fontSize: Number(found.fontSize) || def.fontSize || 13,
+          textColor: found.textColor || def.textColor,
+          bgColor: found.bgColor || def.bgColor,
+          textAlign: ['left', 'center', 'right'].includes(found.textAlign) ? found.textAlign : def.textAlign,
+          visible: found.visible !== false
+        };
+      });
+
+      const responsePayload = {
+        canvasBg: parsedLayout.canvasBg || '#ffffff',
+        primaryColor: parsedLayout.primaryColor || '#18181b',
+        fontFamily: ['sans', 'serif', 'mono'].includes(parsedLayout.fontFamily) ? parsedLayout.fontFamily : 'sans',
+        canvasHeight: Math.max(800, Number(parsedLayout.canvasHeight) || 1050),
+        elements: finalElements
+      };
+
+      res.json(responsePayload);
     } catch (error: any) {
       console.error("Layout extraction error:", error);
       res.status(500).json({ error: error.message || "Failed to extract layout design" });
