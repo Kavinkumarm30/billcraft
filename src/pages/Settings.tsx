@@ -15,30 +15,26 @@ import {
   Check, 
   Sparkles, 
   Move, 
-  Trash2, 
   Eye, 
   EyeOff, 
-  RotateCcw, 
   ZoomIn, 
   ZoomOut, 
   AlignLeft, 
   AlignCenter, 
   AlignRight, 
-  Plus, 
   CheckCircle2,
   Wand2,
   Layers,
-  Square,
-  CircleDot,
-  SlidersHorizontal,
-  ChevronRight,
   Info,
-  Maximize2,
   Upload,
-  Camera,
-  FileUp,
-  Brain,
-  Image as ImageIcon,
+  ShieldCheck,
+  Users,
+  Lock,
+  Unlock,
+  FileText,
+  Clock,
+  AlertCircle,
+  FileCode,
   X
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -47,9 +43,9 @@ export interface CanvasElement {
   id: string;
   name: string;
   type: 'company_header' | 'invoice_meta' | 'billed_to' | 'items_table' | 'totals_card' | 'bank_details' | 'signature_block' | 'notes_terms';
-  x: number; // in pixels relative to 800px width canvas
-  y: number; // in pixels
-  width: number; // in pixels
+  x: number;
+  y: number;
+  width: number;
   fontSize?: number;
   textColor?: string;
   bgColor?: string;
@@ -200,7 +196,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
   ]
 };
 
-const prebuiltCanvaTemplates: { name: string; desc: string; badge: string; color: string; design: CanvaLayoutDesign }[] = [
+const prebuiltCanvaTemplates = [
   {
     name: 'Canva Modern Clean',
     badge: 'Popular',
@@ -216,7 +212,7 @@ const prebuiltCanvaTemplates: { name: string; desc: string; badge: string; color
     design: {
       canvasBg: '#ffffff',
       primaryColor: '#0f172a',
-      fontFamily: 'sans',
+      fontFamily: 'sans' as const,
       canvasHeight: 1050,
       elements: [
         { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 420 },
@@ -238,7 +234,7 @@ const prebuiltCanvaTemplates: { name: string; desc: string; badge: string; color
     design: {
       canvasBg: '#ffffff',
       primaryColor: '#ea580c',
-      fontFamily: 'serif',
+      fontFamily: 'serif' as const,
       canvasHeight: 1050,
       elements: [
         { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#ea580c' },
@@ -260,39 +256,17 @@ const prebuiltCanvaTemplates: { name: string; desc: string; badge: string; color
     design: {
       canvasBg: '#ffffff',
       primaryColor: '#059669',
-      fontFamily: 'sans',
+      fontFamily: 'sans' as const,
       canvasHeight: 1050,
       elements: [
-        { ...defaultCanvaDesign.elements[0], x: 200, y: 35, width: 400, textAlign: 'center' },
-        { ...defaultCanvaDesign.elements[1], x: 200, y: 140, width: 400, textAlign: 'center' },
+        { ...defaultCanvaDesign.elements[0], x: 200, y: 35, width: 400, textAlign: 'center' as const },
+        { ...defaultCanvaDesign.elements[1], x: 200, y: 140, width: 400, textAlign: 'center' as const },
         { ...defaultCanvaDesign.elements[2], x: 40, y: 230, width: 720, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
         { ...defaultCanvaDesign.elements[3], x: 40, y: 360, width: 720 },
         { ...defaultCanvaDesign.elements[4], x: 480, y: 600, width: 280, bgColor: '#059669', textColor: '#ffffff' },
         { ...defaultCanvaDesign.elements[5], x: 40, y: 600, width: 410, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
         { ...defaultCanvaDesign.elements[6], x: 40, y: 740, width: 440 },
         { ...defaultCanvaDesign.elements[7], x: 520, y: 740, width: 240 },
-      ]
-    }
-  },
-  {
-    name: 'Royal Sapphire',
-    badge: 'Luxury',
-    desc: 'Prestigious blue theme with spacious table and boxed bank box',
-    color: '#2563eb',
-    design: {
-      canvasBg: '#ffffff',
-      primaryColor: '#2563eb',
-      fontFamily: 'sans',
-      canvasHeight: 1050,
-      elements: [
-        { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#2563eb' },
-        { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#2563eb' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720 },
-        { ...defaultCanvaDesign.elements[4], x: 480, y: 540, width: 280, bgColor: '#2563eb', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 520, y: 690, width: 240 },
       ]
     }
   }
@@ -302,7 +276,7 @@ export default function Settings() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'canva' | 'profile'>('canva');
+  const [activeTab, setActiveTab] = useState<'canva' | 'profile' | 'permissions'>('canva');
   
   // Organization profile states
   const [companyName, setCompanyName] = useState('');
@@ -322,11 +296,12 @@ export default function Settings() {
   const [zoomLevel, setZoomLevel] = useState<number>(0.85);
   const [sidebarPanel, setSidebarPanel] = useState<'templates' | 'elements' | 'styles'>('templates');
 
-  // AI Layout Extractor Dialog State
-  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
-  const [templateFile, setTemplateFile] = useState<File | null>(null);
-  const [templatePreview, setTemplatePreview] = useState<string | null>(null);
-  const [isExtractingLayout, setIsExtractingLayout] = useState(false);
+  // Custom layout request modal
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [customFile, setCustomFile] = useState<File | null>(null);
+  const [customFilePreview, setCustomFilePreview] = useState<string | null>(null);
+  const [customNote, setCustomNote] = useState('');
+  const [isSubmittingCustom, setIsSubmittingCustom] = useState(false);
 
   // Dragging state
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -350,6 +325,30 @@ export default function Settings() {
       });
       if (!res.ok) throw new Error('Failed to fetch settings');
       return res.json().catch(() => ({}));
+    }
+  });
+
+  const { data: customRequests, refetch: refetchCustomRequests } = useQuery({
+    queryKey: ['customLayoutRequests'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch('/api/custom-layout-requests', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return [];
+      return res.json().catch(() => []);
+    }
+  });
+
+  const { data: teamMembers, refetch: refetchTeam } = useQuery({
+    queryKey: ['teamMembers'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch('/api/team', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) return [];
+      return res.json().catch(() => []);
     }
   });
 
@@ -422,22 +421,21 @@ export default function Settings() {
     mutation.mutate(payload);
   };
 
-  // AI Layout Extraction Handler
-  const handleExtractLayoutWithAi = async () => {
-    if (!templateFile) {
-      toast.error('Please select an invoice or bill image to analyze');
+  // Submit custom template request for team review
+  const handleSubmitCustomRequest = async () => {
+    if (!customFile) {
+      toast.error('Please select an invoice design or photo to upload');
       return;
     }
 
-    setIsExtractingLayout(true);
-    const toastId = toast.loading('Gemini AI is analyzing your bill layout, coordinates, and styling...');
-
+    setIsSubmittingCustom(true);
     try {
       const formData = new FormData();
-      formData.append('file', templateFile);
+      formData.append('file', customFile);
+      formData.append('note', customNote || 'Custom layout design upload');
 
       const token = await getToken();
-      const res = await fetch('/api/settings/extract-layout', {
+      const res = await fetch('/api/custom-layout-requests', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
@@ -445,40 +443,39 @@ export default function Settings() {
         body: formData,
       });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to extract bill layout with AI');
-      }
+      if (!res.ok) throw new Error('Failed to submit design request');
 
-      const extractedDesign: CanvaLayoutDesign = await res.json();
-      
-      // Merge with default elements to ensure no elements are missing
-      const mergedElements = defaultCanvaDesign.elements.map(defaultEl => {
-        const found = extractedDesign.elements?.find(el => el.type === defaultEl.type || el.id === defaultEl.id);
-        return found ? { ...defaultEl, ...found } : defaultEl;
+      toast.success('Custom design submitted! Our team will review it and grant you access.');
+      setIsCustomModalOpen(false);
+      setCustomFile(null);
+      setCustomFilePreview(null);
+      setCustomNote('');
+      refetchCustomRequests();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit design request');
+    } finally {
+      setIsSubmittingCustom(false);
+    }
+  };
+
+  // Update team member permission
+  const handleUpdatePermission = async (userId: number, updates: any) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`/api/team/${userId}/permissions`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(updates),
       });
 
-      const finalDesign: CanvaLayoutDesign = {
-        canvasBg: extractedDesign.canvasBg || '#ffffff',
-        primaryColor: extractedDesign.primaryColor || '#18181b',
-        fontFamily: extractedDesign.fontFamily || 'sans',
-        canvasHeight: extractedDesign.canvasHeight || 1050,
-        elements: mergedElements
-      };
-
-      setDesign(finalDesign);
-      setIsAiModalOpen(false);
-      setTemplateFile(null);
-      setTemplatePreview(null);
-
-      toast.dismiss(toastId);
-      toast.success('✨ AI successfully extracted your exact bill layout into Canva Studio!');
-    } catch (error: any) {
-      toast.dismiss(toastId);
-      toast.error(error.message || 'AI layout extraction failed. Please try a clearer bill image.');
-      console.error("AI Layout Extract Error:", error);
-    } finally {
-      setIsExtractingLayout(false);
+      if (!res.ok) throw new Error('Failed to update member permissions');
+      toast.success('Member permissions updated successfully!');
+      refetchTeam();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update permissions');
     }
   };
 
@@ -520,7 +517,6 @@ export default function Settings() {
         if (el.id !== dragTargetIdRef.current) return el;
         
         if (isDraggingRef.current) {
-          // Snap to 10px grid for smooth, clean beginner positioning
           const rawX = dragStartPosRef.current.elemX + deltaX;
           const rawY = dragStartPosRef.current.elemY + deltaY;
           const snappedX = Math.max(20, Math.min(780 - el.width, Math.round(rawX / 10) * 10));
@@ -554,7 +550,7 @@ export default function Settings() {
     }));
   };
 
-  // 1-Click Auto Align Magic function (Beginner Friendly)
+  // 1-Click Auto Align
   const handleAutoAlign = () => {
     setDesign(prev => ({
       ...prev,
@@ -594,33 +590,21 @@ export default function Settings() {
 
   return (
     <div className="space-y-4 max-w-full">
-      {/* Top Header Navigation */}
+      {/* Top Navigation Bar */}
       <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
         <div>
           <div className="flex items-center gap-2.5">
             <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs">
-              CANVA STUDIO
+              STUDIO
             </span>
-            <h1 className="text-xl font-black text-gray-900 tracking-tight">Visual Bill Designer</h1>
+            <h1 className="text-xl font-black text-gray-900 tracking-tight">Organization & Bill Settings</h1>
           </div>
-          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-            <span>Click & drag any box to move it anywhere. Use <strong>AI Layout Cloner</strong> or templates for instant setup!</span>
+          <p className="text-xs text-gray-500 mt-1">
+            Customize invoice layout, organization profile, custom templates, and user access permissions
           </p>
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          {activeTab === 'canva' && (
-            <Button
-              type="button"
-              onClick={() => setIsAiModalOpen(true)}
-              className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold px-3.5 h-9 shadow-md flex items-center gap-1.5 transition-transform active:scale-95"
-            >
-              <Brain className="w-4 h-4" />
-              <span>✨ AI Clone from Bill Photo</span>
-            </Button>
-          )}
-
           <div className="flex bg-gray-100 p-1 rounded-xl">
             <button
               type="button"
@@ -630,7 +614,7 @@ export default function Settings() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 inline-block mr-1 text-purple-600" />
-              Canva Designer
+              Canva Customizer
             </button>
             <button
               type="button"
@@ -641,6 +625,16 @@ export default function Settings() {
             >
               <Building2 className="w-3.5 h-3.5 inline-block mr-1 text-blue-600" />
               Company Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('permissions')}
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'permissions' ? 'bg-white text-black shadow-xs' : 'text-gray-600 hover:text-black'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 inline-block mr-1 text-green-600" />
+              Access & Permissions
             </button>
           </div>
 
@@ -657,6 +651,7 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* TAB 1: CANVA STUDIO CUSTOMIZER */}
       {activeTab === 'canva' && (
         <div className="flex flex-col lg:flex-row h-[calc(100vh-135px)] min-h-[720px] border border-gray-200 bg-gray-100 rounded-2xl overflow-hidden shadow-sm">
           
@@ -699,34 +694,58 @@ export default function Settings() {
             {/* Sidebar Panel Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               
-              {/* 1. TEMPLATES PANEL */}
+              {/* 1. TEMPLATES & CUSTOM TEMPLATE REQUEST PANEL */}
               {sidebarPanel === 'templates' && (
                 <div className="space-y-4">
-                  {/* AI Extractor Banner */}
-                  <div 
-                    onClick={() => setIsAiModalOpen(true)}
-                    className="p-3.5 rounded-xl border border-purple-300 bg-gradient-to-br from-purple-50 via-indigo-50/50 to-white hover:border-purple-600 cursor-pointer transition-all hover:shadow-md group"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="p-1.5 rounded-lg bg-purple-600 text-white shadow-xs">
-                        <Brain className="w-4 h-4" />
-                      </span>
+                  {/* Custom Bill Layout Upload Section (Restored as requested) */}
+                  <div className="p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/40 space-y-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0 mt-0.5">
+                        <FileCode className="w-4 h-4" />
+                      </div>
                       <div>
-                        <h4 className="text-xs font-black text-purple-950 group-hover:text-purple-700 transition-colors">
-                          ✨ AI Bill Layout Cloner
-                        </h4>
-                        <p className="text-[10px] text-purple-700 font-semibold">Upload photo & clone exact design</p>
+                        <h4 className="text-xs font-black text-amber-950">Have a custom bill layout?</h4>
+                        <p className="text-[11px] text-amber-800 leading-tight mt-0.5">
+                          Upload your design, and our team will review it and grant you access.
+                        </p>
                       </div>
                     </div>
-                    <p className="text-[11px] text-gray-600 leading-tight">
-                      Take a photo of your existing bill format and Gemini AI will reproduce the layout into Canva in seconds!
-                    </p>
+
+                    <Button
+                      type="button"
+                      onClick={() => setIsCustomModalOpen(true)}
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold h-8 shadow-xs"
+                    >
+                      <Upload className="w-3.5 h-3.5 mr-1.5" />
+                      Upload Custom Design
+                    </Button>
+
+                    {/* Show Submitted Requests if any */}
+                    {customRequests && customRequests.length > 0 && (
+                      <div className="pt-2 border-t border-amber-200/60 space-y-1.5">
+                        <p className="text-[10px] font-bold text-amber-900 uppercase tracking-wider">Your Requests</p>
+                        {customRequests.map((req: any) => (
+                          <div key={req.id} className="p-2 bg-white rounded-lg border border-amber-200 flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-gray-700 truncate max-w-[120px]">
+                              {req.note || 'Custom Design'}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              req.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                              req.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                              'bg-amber-100 text-amber-800'
+                            }`}>
+                              {req.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Pro Templates</p>
-                      <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">Beginner Friendly</span>
+                      <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Layout Presets</p>
+                      <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">Ready to Use</span>
                     </div>
 
                     {prebuiltCanvaTemplates.map((t, idx) => (
@@ -849,12 +868,12 @@ export default function Settings() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Typography Font Pairing</Label>
+                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Typography Font</Label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {[
-                        { id: 'sans', label: 'Modern Sans', font: 'font-sans' },
-                        { id: 'serif', label: 'Classic Serif', font: 'font-serif' },
-                        { id: 'mono', label: 'Tech Mono', font: 'font-mono' }
+                        { id: 'sans', label: 'Sans' },
+                        { id: 'serif', label: 'Serif' },
+                        { id: 'mono', label: 'Mono' }
                       ].map(f => (
                         <button
                           key={f.id}
@@ -862,7 +881,7 @@ export default function Settings() {
                           onClick={() => setDesign(p => ({ ...p, fontFamily: f.id as any }))}
                           className={`py-2 text-xs font-bold rounded-lg border text-center transition-all ${
                             design.fontFamily === f.id ? 'border-black bg-black text-white shadow-xs' : 'border-gray-200 hover:bg-gray-50'
-                          } ${f.font}`}
+                          }`}
                         >
                           {f.label}
                         </button>
@@ -894,25 +913,14 @@ export default function Settings() {
             {/* Canva Top Floating Toolbar */}
             <div className="p-2 px-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 shadow-xs z-10">
               
-              {/* Quick Actions & Magic Auto-Align */}
+              {/* Quick Actions */}
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={() => setIsAiModalOpen(true)}
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs font-bold border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-900 shadow-xs flex items-center gap-1"
-                >
-                  <Brain className="w-3.5 h-3.5 text-purple-600" />
-                  ✨ AI Clone Layout
-                </Button>
-
                 <Button
                   type="button"
                   onClick={handleAutoAlign}
                   variant="outline"
                   size="sm"
-                  className="h-8 text-xs font-bold border-gray-200 text-gray-700 hover:bg-gray-100"
+                  className="h-8 text-xs font-bold border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-900 shadow-xs"
                 >
                   <Wand2 className="w-3.5 h-3.5 mr-1" />
                   Auto-Align
@@ -932,7 +940,7 @@ export default function Settings() {
                 )}
               </div>
 
-              {/* Selected Element Quick Formatting Bar */}
+              {/* Selected Element Formatting Bar */}
               {selectedElem && (
                 <div className="flex items-center gap-2 flex-wrap text-xs bg-gray-50 p-1 rounded-xl border border-gray-200">
                   <span className="font-black text-gray-800 px-2 py-0.5 rounded bg-white text-xs shadow-2xs">
@@ -1080,7 +1088,7 @@ export default function Settings() {
                           : 'hover:ring-1 hover:ring-purple-400 hover:shadow-md'
                       }`}
                     >
-                      {/* Canva Selection Badge & Resize Handle */}
+                      {/* Selection Badge & Resize Handle */}
                       {isSelected && (
                         <>
                           <div className="absolute -top-7 left-0 bg-purple-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 pointer-events-none tracking-wide">
@@ -1088,7 +1096,6 @@ export default function Settings() {
                             {el.name} ({el.x}px, {el.y}px)
                           </div>
                           
-                          {/* Right Resize Drag Handle */}
                           <div 
                             onPointerDown={(e) => handlePointerDown(e, el.id, true)}
                             className="absolute -right-2 top-1/2 -translate-y-1/2 w-3.5 h-7 bg-purple-600 border border-white rounded cursor-ew-resize hover:scale-125 transition-transform z-40 shadow-sm"
@@ -1358,52 +1365,196 @@ export default function Settings() {
         </Card>
       )}
 
-      {/* AI Bill Layout Cloner Modal */}
-      <Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
-        <DialogContent className="sm:max-w-[540px]">
+      {/* TAB 3: ACCESS & PERMISSIONS CONTROL (READ, WRITE, LAYOUT ACCESS) */}
+      {activeTab === 'permissions' && (
+        <div className="space-y-6 max-w-5xl">
+          {/* Permissions Overview Cards */}
+          <div className="grid sm:grid-cols-3 gap-4">
+            <Card className="border border-blue-100 bg-blue-50/40 shadow-xs">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+                  <Eye className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-blue-950">Read Access</h4>
+                  <p className="text-[11px] text-blue-800 mt-0.5">Can view dashboard metrics, history list, and download PDFs</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-emerald-100 bg-emerald-50/40 shadow-xs">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-emerald-950">Write Access</h4>
+                  <p className="text-[11px] text-emerald-800 mt-0.5">Can upload receipts, edit line items, and generate invoices</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-purple-100 bg-purple-50/40 shadow-xs">
+              <CardContent className="p-4 flex items-start gap-3">
+                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-purple-950">Layout Customizer Access</h4>
+                  <p className="text-[11px] text-purple-800 mt-0.5">Can rearrange canvas sections, change styles, and save layouts</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Team Members Permissions Table */}
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base font-bold text-gray-900">Team Members & Access Controls</CardTitle>
+                <CardDescription className="text-xs">Manage Read, Write, and Layout Customization permissions per user</CardDescription>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
+                {teamMembers?.length || 0} Members
+              </span>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b bg-gray-50/70 text-gray-600">
+                    <th className="py-3 px-4 font-bold">User</th>
+                    <th className="py-3 px-3 font-bold">Role</th>
+                    <th className="py-3 px-3 font-bold text-center">Read Access</th>
+                    <th className="py-3 px-3 font-bold text-center">Write Access</th>
+                    <th className="py-3 px-3 font-bold text-center">Layout Access</th>
+                    <th className="py-3 px-3 font-bold text-center">Customers</th>
+                    <th className="py-3 px-4 font-bold text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {teamMembers && teamMembers.length > 0 ? (
+                    teamMembers.map((member: any) => (
+                      <tr key={member.id} className="hover:bg-gray-50/50">
+                        <td className="py-3 px-4">
+                          <p className="font-bold text-gray-900">{member.name || member.email?.split('@')[0]}</p>
+                          <p className="text-[11px] text-gray-500 font-mono">{member.email}</p>
+                        </td>
+                        <td className="py-3 px-3">
+                          <select
+                            value={member.role}
+                            onChange={(e) => handleUpdatePermission(member.id, { role: e.target.value })}
+                            className="text-xs border rounded-lg px-2 py-1 bg-white font-semibold text-gray-800 focus:ring-1 focus:ring-black"
+                          >
+                            <option value="SUPER_ADMIN">Super Admin</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="EMPLOYEE">Employee</option>
+                          </select>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <input 
+                            type="checkbox"
+                            checked={member.canReadInvoices !== false}
+                            onChange={(e) => handleUpdatePermission(member.id, { canReadInvoices: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <input 
+                            type="checkbox"
+                            checked={member.canWriteInvoices !== false}
+                            onChange={(e) => handleUpdatePermission(member.id, { canWriteInvoices: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <input 
+                            type="checkbox"
+                            checked={member.canCustomizeLayout !== false}
+                            onChange={(e) => handleUpdatePermission(member.id, { canCustomizeLayout: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <input 
+                            type="checkbox"
+                            checked={member.canManageCustomers !== false}
+                            onChange={(e) => handleUpdatePermission(member.id, { canManageCustomers: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                          />
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdatePermission(member.id, { isActive: !member.isActive })}
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              member.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {member.isActive !== false ? 'Active' : 'Disabled'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500">
+                        No team members registered yet
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Upload Custom Design Request Modal */}
+      <Dialog open={isCustomModalOpen} onOpenChange={setIsCustomModalOpen}>
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-purple-100 text-purple-700">
-                <Brain className="w-5 h-5" />
+              <div className="p-2 rounded-xl bg-amber-100 text-amber-700">
+                <FileCode className="w-5 h-5" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-gray-900">
-                  ✨ AI Bill Layout Cloner
+                <DialogTitle className="text-base font-bold text-gray-900">
+                  Upload Custom Bill Layout
                 </DialogTitle>
                 <DialogDescription className="text-xs text-gray-500">
-                  Upload any sample bill or receipt photo to automatically extract its layout & styling
+                  Upload your design file and our team will review it and grant access
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
-            {!templatePreview ? (
+          <div className="space-y-4 py-2">
+            {!customFilePreview ? (
               <label 
-                htmlFor="billTemplateUpload" 
-                className="border-2 border-dashed border-purple-200 hover:border-purple-500 bg-purple-50/30 hover:bg-purple-50/60 transition-all rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer text-center group"
+                htmlFor="customTemplateUploadInput" 
+                className="border-2 border-dashed border-amber-200 hover:border-amber-500 bg-amber-50/40 hover:bg-amber-50/70 transition-all rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer text-center group"
               >
-                <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mb-3 group-hover:scale-110 transition-transform">
-                  <Upload className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-2 group-hover:scale-110 transition-transform">
+                  <Upload className="w-5 h-5" />
                 </div>
-                <p className="text-sm font-bold text-gray-800">
-                  Click or drag your bill / invoice template here
+                <p className="text-xs font-bold text-gray-800">
+                  Upload your bill layout design / screenshot
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Supports JPG, PNG, and PDF screenshots up to 10MB
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  PNG, JPG, or PDF format
                 </p>
                 <input 
                   type="file" 
-                  id="billTemplateUpload" 
-                  accept="image/*"
+                  id="customTemplateUploadInput" 
+                  accept="image/*,.pdf"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      setTemplateFile(file);
+                      setCustomFile(file);
                       const reader = new FileReader();
                       reader.onloadend = () => {
-                        setTemplatePreview(reader.result as string);
+                        setCustomFilePreview(reader.result as string);
                       };
                       reader.readAsDataURL(file);
                     }
@@ -1411,36 +1562,34 @@ export default function Settings() {
                 />
               </label>
             ) : (
-              <div className="space-y-3">
-                <div className="relative border rounded-xl overflow-hidden bg-gray-900 flex justify-center max-h-[300px]">
-                  <img src={templatePreview} alt="Template Preview" className="max-h-[300px] object-contain" />
+              <div className="space-y-2">
+                <div className="relative border rounded-xl overflow-hidden bg-gray-900 flex justify-center max-h-[220px]">
+                  <img src={customFilePreview} alt="Preview" className="max-h-[220px] object-contain" />
                   <button
                     type="button"
                     onClick={() => {
-                      setTemplateFile(null);
-                      setTemplatePreview(null);
+                      setCustomFile(null);
+                      setCustomFilePreview(null);
                     }}
                     className="absolute top-2 right-2 p-1 bg-black/70 hover:bg-black text-white rounded-full transition-colors"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <p className="text-xs text-center text-gray-500 font-medium">
-                  {templateFile?.name} ({(templateFile ? templateFile.size / (1024 * 1024) : 0).toFixed(2)} MB)
+                <p className="text-[11px] text-center text-gray-500 font-medium">
+                  {customFile?.name} ({(customFile ? customFile.size / (1024 * 1024) : 0).toFixed(2)} MB)
                 </p>
               </div>
             )}
 
-            <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs text-gray-600 space-y-1">
-              <p className="font-bold text-gray-900 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                What Gemini AI analyzes:
-              </p>
-              <ul className="list-disc pl-4 space-y-0.5 text-gray-500 text-[11px]">
-                <li>Exact X & Y positioning and width of Header, Table, Totals, and Notes</li>
-                <li>Dominant brand theme colors and background container cards</li>
-                <li>Alignment (Left, Right, or Center) of titles and totals</li>
-              </ul>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-gray-700">Special Notes or Instructions</Label>
+              <Input
+                value={customNote}
+                onChange={(e) => setCustomNote(e.target.value)}
+                placeholder="e.g. Please add our custom header banner and tax columns"
+                className="h-9 text-xs"
+              />
             </div>
           </div>
 
@@ -1449,30 +1598,27 @@ export default function Settings() {
               type="button"
               variant="outline"
               onClick={() => {
-                setIsAiModalOpen(false);
-                setTemplateFile(null);
-                setTemplatePreview(null);
+                setIsCustomModalOpen(false);
+                setCustomFile(null);
+                setCustomFilePreview(null);
               }}
-              disabled={isExtractingLayout}
+              disabled={isSubmittingCustom}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              onClick={handleExtractLayoutWithAi}
-              disabled={!templateFile || isExtractingLayout}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold"
+              onClick={handleSubmitCustomRequest}
+              disabled={!customFile || isSubmittingCustom}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
             >
-              {isExtractingLayout ? (
+              {isSubmittingCustom ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Extracting Layout with AI...
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Submitting...
                 </>
               ) : (
-                <>
-                  <Brain className="w-4 h-4 mr-2" />
-                  Clone Layout to Canva
-                </>
+                'Submit for Team Review'
               )}
             </Button>
           </DialogFooter>

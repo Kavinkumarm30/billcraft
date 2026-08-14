@@ -15,6 +15,10 @@ export const users = pgTable('users', {
   name: text('name'),
   phone: text('phone'),
   role: text('role').notNull().default('EMPLOYEE'), // SUPER_ADMIN, ADMIN, EMPLOYEE
+  canReadInvoices: boolean('can_read_invoices').notNull().default(true),
+  canWriteInvoices: boolean('can_write_invoices').notNull().default(true),
+  canCustomizeLayout: boolean('can_customize_layout').notNull().default(true),
+  canManageCustomers: boolean('can_manage_customers').notNull().default(true),
   isActive: boolean('is_active').notNull().default(true),
   orgId: integer('org_id').references(() => organizations.id),
   subscriptionStatus: text('subscription_status').notNull().default('TRIAL'), // TRIAL, PENDING_VERIFICATION, ACTIVE, EXPIRED, REJECTED

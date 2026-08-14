@@ -228,264 +228,126 @@ const PORT = 3000;
     }
   });
 
-  // AI Layout Extractor from Sample Bill
-  app.post("/api/settings/extract-layout", requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+  // Custom Layout Requests Endpoints
+  app.get("/api/custom-layout-requests", requireAuth, async (req: AuthRequest, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No bill image file uploaded" });
-      }
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
 
-      const base64Image = req.file.buffer.toString("base64");
+      const requests = await db.select().from(customLayoutRequests)
+        .where(eq(customLayoutRequests.orgId, u.orgId))
+        .orderBy(desc(customLayoutRequests.submittedAt));
 
-      const promptParts = [
-        {
-          inlineData: {
-            mimeType: req.file.mimetype,
-            data: base64Image,
-          }
-        },
-        {
-          text: `You are an expert document design and visual layout analysis AI.
-Analyze the visual layout structure, section coordinates, colors, typography, and styling of this invoice or bill image, and reconstruct it into an 800px width by 1050px height A4 canvas design.
-
-Map the document into the following standard invoice blocks:
-1. "company_header": Logo, Company Name, address, contact, GST (estimate x: 20-750, y: 20-250, width: 200-760, textAlign: left/center/right, textColor, bgColor)
-2. "invoice_meta": "INVOICE" header title, Invoice number, Date, Status/badge (estimate x, y, width, textAlign, textColor, bgColor)
-3. "billed_to": Customer details box (Customer Name, Address, Phone)
-4. "items_table": Table containing line items, descriptions, quantities, rates, and amounts
-5. "totals_card": Subtotal, Discount, Tax, and Grand Total block
-6. "bank_details": Bank account, IFSC, UPI ID details (if present, otherwise set visible: false)
-7. "notes_terms": Terms, payment conditions, notes (if present)
-8. "signature_block": Authorized signature line / stamp (if present)
-
-Also detect:
-- Dominant primary brand color / accent (hex code e.g. #18181b, #2563eb, #ea580c, #059669, etc.)
-- Typography style: "sans" | "serif" | "mono"
-- Canvas background color (usually "#ffffff")
-
-Return STRICTLY valid JSON conforming to this schema:
-{
-  "canvasBg": "#ffffff",
-  "primaryColor": "#18181b",
-  "fontFamily": "sans",
-  "canvasHeight": 1050,
-  "elements": [
-    {
-      "id": "company_header",
-      "name": "Company Header & Logo",
-      "type": "company_header",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 14,
-      "textColor": "#18181b",
-      "bgColor": "transparent",
-      "textAlign": "left",
-      "fontWeight": "bold",
-      "visible": true
-    },
-    {
-      "id": "invoice_meta",
-      "name": "Invoice Title & Meta",
-      "type": "invoice_meta",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 13,
-      "textColor": "#18181b",
-      "bgColor": "transparent",
-      "textAlign": "right",
-      "fontWeight": "bold",
-      "visible": true
-    },
-    {
-      "id": "billed_to",
-      "name": "Billed To (Customer Details)",
-      "type": "billed_to",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 13,
-      "textColor": "#1f2937",
-      "bgColor": "#f9fafb",
-      "borderColor": "#e5e7eb",
-      "borderWidth": 1,
-      "borderRadius": 12,
-      "padding": 16,
-      "textAlign": "left",
-      "visible": true
-    },
-    {
-      "id": "items_table",
-      "name": "Products & Items Table",
-      "type": "items_table",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 13,
-      "textColor": "#1f2937",
-      "bgColor": "#ffffff",
-      "borderColor": "#e5e7eb",
-      "borderWidth": 1,
-      "borderRadius": 8,
-      "textAlign": "left",
-      "visible": true
-    },
-    {
-      "id": "totals_card",
-      "name": "Subtotal & Grand Total",
-      "type": "totals_card",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 13,
-      "textColor": "#111827",
-      "bgColor": "#f9fafb",
-      "borderColor": "#e5e7eb",
-      "borderWidth": 1,
-      "borderRadius": 12,
-      "padding": 16,
-      "textAlign": "right",
-      "visible": true
-    },
-    {
-      "id": "bank_details",
-      "name": "Bank & UPI Payment Info",
-      "type": "bank_details",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 12,
-      "textColor": "#374151",
-      "bgColor": "#f9fafb",
-      "borderColor": "#e5e7eb",
-      "borderWidth": 1,
-      "borderRadius": 12,
-      "padding": 16,
-      "textAlign": "left",
-      "visible": true
-    },
-    {
-      "id": "notes_terms",
-      "name": "Notes & Terms",
-      "type": "notes_terms",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 12,
-      "textColor": "#6b7280",
-      "bgColor": "transparent",
-      "textAlign": "left",
-      "visible": true
-    },
-    {
-      "id": "signature_block",
-      "name": "Authorized Signature",
-      "type": "signature_block",
-      "x": number,
-      "y": number,
-      "width": number,
-      "fontSize": 12,
-      "textColor": "#4b5563",
-      "bgColor": "transparent",
-      "textAlign": "center",
-      "visible": true
-    }
-  ]
-}
-Ensure all coordinates (x: 20-760, y: 20-1000) are realistic, non-overlapping, and proportional on an 800px width canvas.`
-        }
-      ];
-
-      const modelConfig = {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      };
-
-      const modelChain = ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-flash-latest"];
-      let response;
-      let lastError;
-
-      for (const modelName of modelChain) {
-        try {
-          response = await ai.models.generateContent({
-            model: modelName,
-            contents: [{ role: "user", parts: promptParts }],
-            config: modelConfig
-          });
-          if (response && response.text) {
-            console.log(`Successfully extracted bill layout using model: ${modelName}`);
-            break;
-          }
-        } catch (err: any) {
-          console.warn(`Gemini model ${modelName} layout extract error, trying next fallback:`, err.message || err);
-          lastError = err;
-        }
-      }
-
-      if (!response || !response.text) {
-        throw lastError || new Error("Failed to extract layout design from AI model");
-      }
-
-      let resultText = response.text || '';
-      const jsonMatch = resultText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        resultText = jsonMatch[0];
-      } else {
-        resultText = resultText.replace(/^\s*```(json)?/i, '').replace(/```\s*$/, '').trim();
-      }
-
-      let parsedLayout: any;
-      try {
-        parsedLayout = JSON.parse(resultText);
-      } catch (e) {
-        console.error("JSON parse failed on resultText:", resultText);
-        throw new Error("Invalid layout format returned by AI");
-      }
-
-      // Default elements structure for guarantee
-      const defaultElements = [
-        { id: 'company_header', name: 'Company Header & Logo', type: 'company_header', x: 40, y: 40, width: 400, fontSize: 14, textColor: '#18181b', bgColor: 'transparent', textAlign: 'left', fontWeight: 'bold', visible: true },
-        { id: 'invoice_meta', name: 'Invoice Title & Meta', type: 'invoice_meta', x: 480, y: 40, width: 280, fontSize: 13, textColor: '#18181b', bgColor: 'transparent', textAlign: 'right', fontWeight: 'bold', visible: true },
-        { id: 'billed_to', name: 'Billed To (Customer Details)', type: 'billed_to', x: 40, y: 160, width: 720, fontSize: 13, textColor: '#1f2937', bgColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 12, padding: 16, textAlign: 'left', visible: true },
-        { id: 'items_table', name: 'Products & Items Table', type: 'items_table', x: 40, y: 290, width: 720, fontSize: 13, textColor: '#1f2937', bgColor: '#ffffff', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 8, textAlign: 'left', visible: true },
-        { id: 'totals_card', name: 'Subtotal & Grand Total', type: 'totals_card', x: 480, y: 540, width: 280, fontSize: 13, textColor: '#111827', bgColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 12, padding: 16, textAlign: 'right', visible: true },
-        { id: 'bank_details', name: 'Bank & UPI Payment Info', type: 'bank_details', x: 40, y: 540, width: 410, fontSize: 12, textColor: '#374151', bgColor: '#f9fafb', borderColor: '#e5e7eb', borderWidth: 1, borderRadius: 12, padding: 16, textAlign: 'left', visible: true },
-        { id: 'notes_terms', name: 'Notes & Terms', type: 'notes_terms', x: 40, y: 690, width: 440, fontSize: 12, textColor: '#6b7280', bgColor: 'transparent', textAlign: 'left', visible: true },
-        { id: 'signature_block', name: 'Authorized Signature', type: 'signature_block', x: 520, y: 690, width: 240, fontSize: 12, textColor: '#4b5563', bgColor: 'transparent', textAlign: 'center', visible: true }
-      ];
-
-      // Normalize elements array
-      const rawElements = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
-      const finalElements = defaultElements.map(def => {
-        const found = rawElements.find((el: any) => el.type === def.type || el.id === def.id);
-        if (!found) return def;
-        return {
-          ...def,
-          ...found,
-          x: Math.max(10, Math.min(780, Number(found.x) || def.x)),
-          y: Math.max(10, Math.min(1050, Number(found.y) || def.y)),
-          width: Math.max(120, Math.min(780, Number(found.width) || def.width)),
-          fontSize: Number(found.fontSize) || def.fontSize || 13,
-          textColor: found.textColor || def.textColor,
-          bgColor: found.bgColor || def.bgColor,
-          textAlign: ['left', 'center', 'right'].includes(found.textAlign) ? found.textAlign : def.textAlign,
-          visible: found.visible !== false
-        };
-      });
-
-      const responsePayload = {
-        canvasBg: parsedLayout.canvasBg || '#ffffff',
-        primaryColor: parsedLayout.primaryColor || '#18181b',
-        fontFamily: ['sans', 'serif', 'mono'].includes(parsedLayout.fontFamily) ? parsedLayout.fontFamily : 'sans',
-        canvasHeight: Math.max(800, Number(parsedLayout.canvasHeight) || 1050),
-        elements: finalElements
-      };
-
-      res.json(responsePayload);
+      res.json(requests);
     } catch (error: any) {
-      console.error("Layout extraction error:", error);
-      res.status(500).json({ error: error.message || "Failed to extract layout design" });
+      console.error("Fetch custom layout requests error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/custom-layout-requests", requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      let fileUrl = '';
+      if (req.file) {
+        fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      } else if (req.body.fileUrl) {
+        fileUrl = req.body.fileUrl;
+      }
+
+      if (!fileUrl) {
+        return res.status(400).json({ error: "Please upload an invoice design file or image" });
+      }
+
+      const newRequest = await db.insert(customLayoutRequests).values({
+        orgId: u.orgId,
+        userId: u.id,
+        fileUrl: fileUrl,
+        note: req.body.note || 'Custom layout design request',
+        status: 'PENDING',
+        submittedAt: new Date(),
+      }).returning();
+
+      res.json(newRequest[0]);
+    } catch (error: any) {
+      console.error("Submit custom layout request error:", error);
+      res.status(500).json({ error: error.message || "Failed to submit request" });
+    }
+  });
+
+  // Team Members & Role-based Permissions Access Control
+  app.get("/api/team", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      const teamMembers = await db.select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        phone: users.phone,
+        role: users.role,
+        isActive: users.isActive,
+        canReadInvoices: users.canReadInvoices,
+        canWriteInvoices: users.canWriteInvoices,
+        canCustomizeLayout: users.canCustomizeLayout,
+        canManageCustomers: users.canManageCustomers,
+        createdAt: users.createdAt,
+      }).from(users).where(eq(users.orgId, u.orgId));
+
+      res.json(teamMembers);
+    } catch (error: any) {
+      console.error("Fetch team error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.put("/api/team/:id/permissions", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      // Only Super Admin or Admin can manage permissions
+      if (u.role !== 'SUPER_ADMIN' && u.role !== 'ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Only admins can manage team permissions" });
+      }
+
+      const targetUserId = parseInt(req.params.id);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+
+      const targetUsers = await db.select().from(users).where(eq(users.id, targetUserId));
+      if (targetUsers.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const targetUser = targetUsers[0];
+      if (targetUser.orgId !== u.orgId && u.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: User belongs to another organization" });
+      }
+
+      const { role, canReadInvoices, canWriteInvoices, canCustomizeLayout, canManageCustomers, isActive } = req.body;
+
+      const updatedUser = await db.update(users)
+        .set({
+          role: role !== undefined ? role : targetUser.role,
+          canReadInvoices: canReadInvoices !== undefined ? Boolean(canReadInvoices) : targetUser.canReadInvoices,
+          canWriteInvoices: canWriteInvoices !== undefined ? Boolean(canWriteInvoices) : targetUser.canWriteInvoices,
+          canCustomizeLayout: canCustomizeLayout !== undefined ? Boolean(canCustomizeLayout) : targetUser.canCustomizeLayout,
+          canManageCustomers: canManageCustomers !== undefined ? Boolean(canManageCustomers) : targetUser.canManageCustomers,
+          isActive: isActive !== undefined ? Boolean(isActive) : targetUser.isActive,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, targetUserId))
+        .returning();
+
+      res.json(updatedUser[0]);
+    } catch (error: any) {
+      console.error("Update permissions error:", error);
+      res.status(500).json({ error: error.message || "Failed to update permissions" });
     }
   });
 
