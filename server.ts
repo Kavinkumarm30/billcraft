@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
-dotenv.config();
-dotenv.config({ path: ".env.local" });
+try {
+  dotenv.config();
+  dotenv.config({ path: ".env.local" });
+} catch (e) {}
 
 import express from "express";
 import path from "path";

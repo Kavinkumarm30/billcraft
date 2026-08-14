@@ -1,3 +1,4 @@
+import { createRequire } from 'module'; const require = createRequire(import.meta.url);
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -81662,8 +81663,11 @@ var customLayoutRequestsRelations = relations(customLayoutRequests, ({ one }) =>
 }));
 
 // src/db/index.ts
-dotenv.config();
-dotenv.config({ path: ".env.local" });
+try {
+  dotenv.config();
+  dotenv.config({ path: ".env.local" });
+} catch (e2) {
+}
 var createPool = () => {
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
   if (connectionString) {
@@ -103655,8 +103659,11 @@ function getApiKeyFromEnv() {
 
 // server.ts
 var import_multer = __toESM(require_multer(), 1);
-import_dotenv.default.config();
-import_dotenv.default.config({ path: ".env.local" });
+try {
+  import_dotenv.default.config();
+  import_dotenv.default.config({ path: ".env.local" });
+} catch (e2) {
+}
 var ai = new GoogleGenAI2({ apiKey: process.env.GEMINI_API_KEY || "dummy_key_if_missing" });
 var upload = (0, import_multer.default)({ storage: import_multer.default.memoryStorage() });
 var app = (0, import_express.default)();
