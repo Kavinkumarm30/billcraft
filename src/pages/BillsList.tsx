@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { FileText, Search, Printer, Eye, Trash2 } from 'lucide-react';
+import { Search, Printer, Trash2, Pencil, CheckCircle2, Clock } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
@@ -26,22 +26,24 @@ export default function BillsList() {
   const [invoiceToDelete, setInvoiceToDelete] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const token = await getToken();
+      const res = await fetch('/api/invoices', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch invoices');
+      const data = await res.json();
+      setInvoices(Array.isArray(data) ? data : []);
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const token = await getToken();
-        const res = await fetch('/api/invoices', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error('Failed to fetch invoices');
-        const text = await res.text(); let data; try { data = JSON.parse(text); } catch(e) { data = []; }
-        setInvoices(data);
-      } catch (error: any) {
-        toast.error(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchInvoices();
   }, [getToken]);
 
@@ -49,6 +51,57 @@ export default function BillsList() {
     inv.invoiceNumber?.toLowerCase().includes(search.toLowerCase()) || 
     inv.customer?.name?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleEdit = (invoice: any) => {
+    const editData = {
+      customerName: invoice.customer?.name || '',
+      phone: invoice.customer?.phone || '',
+      address: invoice.customer?.address || '',
+      invoiceNumber: invoice.invoiceNumber,
+      date: invoice.date ? (invoice.date.includes('T') ? invoice.date.split('T')[0] : invoice.date) : '',
+      items: invoice.items?.map((it: any) => ({
+        description: it.description,
+        quantity: Number(it.quantity) || 1,
+        rate: Number(it.rate) || 0,
+        amount: Number(it.amount) || 0,
+      })) || [],
+      subtotal: Number(invoice.subtotal) || 0,
+      discount: Number(invoice.discount) || 0,
+      taxAmount: Number(invoice.taxAmount) || 0,
+      grandTotal: Number(invoice.grandTotal) || 0,
+      status: invoice.status || 'PAID',
+      paymentMethod: invoice.paymentMethod || 'Cash',
+      paymentReference: invoice.paymentReference || '',
+      notes: invoice.notes || ''
+    };
+
+    sessionStorage.setItem('extractedBillData', JSON.stringify(editData));
+    sessionStorage.removeItem('billImagePreview');
+    navigate('/bills/review', { state: { isEditing: true, invoiceId: invoice.id } });
+  };
+
+  const handlePreview = (invoice: any) => {
+    navigate('/bills/preview', { state: { 
+      invoiceData: {
+        customerName: invoice.customer?.name,
+        phone: invoice.customer?.phone,
+        address: invoice.customer?.address,
+        invoiceNumber: invoice.invoiceNumber,
+        date: invoice.date,
+        items: invoice.items,
+        subtotal: invoice.subtotal,
+        discount: invoice.discount,
+        taxAmount: invoice.taxAmount,
+        grandTotal: invoice.grandTotal,
+        status: invoice.status,
+        paymentMethod: invoice.paymentMethod,
+        paymentReference: invoice.paymentReference,
+        notes: invoice.notes
+      },
+      invoiceId: invoice.id,
+      isReadOnly: true 
+    }});
+  };
 
   const handleDelete = async () => {
     if (!invoiceToDelete) return;
@@ -78,7 +131,7 @@ export default function BillsList() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">History</h1>
-          <p className="text-gray-500 mt-1">View and share previously generated bills</p>
+          <p className="text-gray-500 mt-1">View, edit, print, and share previously generated bills</p>
         </div>
       </div>
 
@@ -88,7 +141,7 @@ export default function BillsList() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
             <Input 
               type="search" 
-              placeholder="Search bills..." 
+              placeholder="Search bills by number or customer..." 
               className="pl-9 bg-gray-50/50" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -110,57 +163,55 @@ export default function BillsList() {
             <TableBody>
               {loading ? (
                  <TableRow>
-                   <TableCell colSpan={5} className="text-center py-12 text-gray-500">
+                   <TableCell colSpan={6} className="text-center py-12 text-gray-500">
                       <div className="flex flex-col items-center justify-center gap-4">
                         <Logo className="h-10 animate-pulse grayscale opacity-50" />
-                        <span>Loading invoices...</span>
+                        <span>Loading history...</span>
                       </div>
                     </TableCell>
                  </TableRow>
               ) : filteredInvoices.length === 0 ? (
                  <TableRow>
-                   <TableCell colSpan={5} className="text-center py-8 text-gray-500">No bills found</TableCell>
+                   <TableCell colSpan={6} className="text-center py-12 text-gray-500">
+                     <p className="text-base font-medium text-gray-700">No bills found in history</p>
+                     <p className="text-sm text-gray-400 mt-1">Generate a bill from OCR or Create Invoice to see it here</p>
+                   </TableCell>
                  </TableRow>
               ) : (
                 filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium text-black">
+                  <TableRow key={invoice.id} className="hover:bg-gray-50/70 transition-colors">
+                    <TableCell className="font-semibold text-black">
                       {invoice.invoiceNumber}
                     </TableCell>
-                    <TableCell>{invoice.customer?.name || 'Unknown'}</TableCell>
-                    <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                    <TableCell>₹{Number(invoice.grandTotal).toFixed(2)}</TableCell>
+                    <TableCell className="font-medium text-gray-800">{invoice.customer?.name || 'Unknown'}</TableCell>
+                    <TableCell className="text-gray-600">{new Date(invoice.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-semibold text-gray-900">₹{Number(invoice.grandTotal || 0).toFixed(2)}</TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        invoice.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        invoice.status === 'PAID' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-orange-100 text-orange-800 border border-orange-200'
                       }`}>
-                        {invoice.status}
+                        {invoice.status === 'PAID' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        {invoice.status || 'PENDING'}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1.5">
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate('/bills/preview', { state: { 
-                              invoiceData: {
-                                customerName: invoice.customer?.name,
-                                phone: invoice.customer?.phone,
-                                address: invoice.customer?.address,
-                                invoiceNumber: invoice.invoiceNumber,
-                                date: invoice.date,
-                                items: invoice.items,
-                                subtotal: invoice.subtotal,
-                                discount: invoice.discount,
-                                taxAmount: invoice.taxAmount,
-                                grandTotal: invoice.grandTotal,
-                                status: invoice.status,
-                                notes: invoice.notes
-                              },
-                              isReadOnly: true 
-                            }});
+                            handleEdit(invoice);
                           }}
-                          className="p-1.5 text-gray-500 hover:text-black hover:bg-gray-100 rounded-md transition-colors"
+                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Edit Bill"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(invoice);
+                          }}
+                          className="p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 rounded-md transition-colors"
                           title="View & Print"
                         >
                           <Printer className="h-4 w-4" />
@@ -190,7 +241,7 @@ export default function BillsList() {
           <DialogHeader>
             <DialogTitle>Delete Invoice?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to permanently delete invoice {invoiceToDelete?.invoiceNumber}? 
+              Are you sure you want to permanently delete invoice <strong>{invoiceToDelete?.invoiceNumber}</strong>? 
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>

@@ -358,7 +358,14 @@ export default function InvoicePreview() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6 print:p-0 print:m-0 print:space-y-0">
       {/* Action Bar - Hidden during printing */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
-        <Button variant="ghost" onClick={() => navigate('/bills/review')} className="text-gray-500">
+        <Button 
+          variant="ghost" 
+          onClick={() => {
+            sessionStorage.setItem('extractedBillData', JSON.stringify(data));
+            navigate('/bills/review', { state: { isEditing: !!location.state?.invoiceId, invoiceId: location.state?.invoiceId } });
+          }} 
+          className="text-gray-600 hover:text-black"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Edit
         </Button>
         <div className="flex items-center gap-3 w-full sm:w-auto">

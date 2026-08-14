@@ -399,6 +399,96 @@ const PORT = 3000;
     }
   });
 
+  app.put("/api/invoices/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      const invoiceId = parseInt(req.params.id);
+      if (isNaN(invoiceId)) {
+        return res.status(400).json({ error: "Invalid invoice ID" });
+      }
+
+      const targetInvoices = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+      if (targetInvoices.length === 0) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const targetInvoice = targetInvoices[0];
+      if (targetInvoice.orgId !== u.orgId) {
+        return res.status(403).json({ error: "Forbidden: You do not have permission to edit this invoice" });
+      }
+
+      const { customerName, phone, address, invoiceNumber, date, subtotal, discount, taxAmount, grandTotal, notes, items, status, paymentMethod, paymentReference } = req.body;
+
+      // 1. Update or create customer
+      let customerId = targetInvoice.customerId;
+      if (customerName) {
+        const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
+        const customer = existingCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
+        if (customer) {
+          customerId = customer.id;
+          if (phone !== undefined || address !== undefined) {
+            await db.update(customers)
+              .set({
+                phone: phone !== undefined ? phone : customer.phone,
+                address: address !== undefined ? address : customer.address,
+                updatedAt: new Date()
+              })
+              .where(eq(customers.id, customer.id));
+          }
+        } else {
+          const newCustomer = await db.insert(customers).values({
+            orgId: u.orgId,
+            name: customerName,
+            phone: phone || null,
+            address: address || null,
+          }).returning();
+          customerId = newCustomer[0].id;
+        }
+      }
+
+      // 2. Update invoice details
+      const updatedInvoice = await db.update(invoices)
+        .set({
+          customerId,
+          invoiceNumber: invoiceNumber || targetInvoice.invoiceNumber,
+          date: date ? new Date(date) : targetInvoice.date,
+          subtotal: String(subtotal || 0),
+          discount: String(discount || 0),
+          taxAmount: String(taxAmount || 0),
+          grandTotal: String(grandTotal || 0),
+          notes: notes !== undefined ? notes : targetInvoice.notes,
+          status: status || targetInvoice.status || 'PENDING',
+          paymentMethod: paymentMethod !== undefined ? paymentMethod : targetInvoice.paymentMethod,
+          paymentReference: paymentReference !== undefined ? paymentReference : targetInvoice.paymentReference,
+          updatedAt: new Date()
+        })
+        .where(eq(invoices.id, invoiceId))
+        .returning();
+
+      // 3. Update line items
+      if (items && Array.isArray(items)) {
+        await db.delete(invoiceItems).where(eq(invoiceItems.invoiceId, invoiceId));
+        if (items.length > 0) {
+          const itemValues = items.map(item => ({
+            invoiceId: invoiceId,
+            description: item.description || '',
+            quantity: String(item.quantity || 1),
+            rate: String(item.rate || 0),
+            amount: String(item.amount || 0)
+          }));
+          await db.insert(invoiceItems).values(itemValues);
+        }
+      }
+
+      res.json(updatedInvoice[0]);
+    } catch (error: any) {
+      console.error("Update invoice error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.delete("/api/invoices/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
       const u = req.dbUser;

@@ -1,23 +1,33 @@
 import LoadingScreen from '../components/LoadingScreen';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Plus, Trash2, ArrowRight, Loader2 } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, Loader2, CreditCard, CheckCircle2, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function ReviewOCR() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { getToken } = useAuth();
+  
   const [data, setData] = useState<any>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
 
   useEffect(() => {
+    // Check if passed via location state for editing
+    if (location.state?.isEditing && location.state?.invoiceId) {
+      setIsEditing(true);
+      setEditingInvoiceId(location.state.invoiceId);
+    }
+
     const savedData = sessionStorage.getItem('extractedBillData');
     const savedImage = sessionStorage.getItem('billImagePreview');
     
@@ -56,6 +66,8 @@ export default function ReviewOCR() {
       });
       if (!parsed.date) parsed.date = new Date().toISOString().split('T')[0];
       if (!parsed.invoiceNumber) parsed.invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
+      if (!parsed.status) parsed.status = 'PAID';
+      if (!parsed.paymentMethod) parsed.paymentMethod = 'Cash';
       
       const subtotal = parsed.items.reduce((sum: number, item: any) => sum + (parseFloat(item.amount) || 0), 0);
       const tax = parseFloat(parsed.taxAmount) || 0;
@@ -70,7 +82,7 @@ export default function ReviewOCR() {
     }
     
     if (savedImage) setImagePreview(savedImage);
-  }, [navigate]);
+  }, [navigate, location]);
 
   const updateField = (field: string, value: string | number) => {
     setData((prev: any) => {
@@ -177,8 +189,8 @@ export default function ReviewOCR() {
         grandTotal,
         notes: data.notes || null,
         status: data.status || 'PAID',
-        paymentMethod: data.paymentMethod || 'Cash',
-        paymentReference: data.paymentReference || null,
+        paymentMethod: data.status === 'PAID' ? (data.paymentMethod || 'Cash') : null,
+        paymentReference: data.status === 'PAID' ? (data.paymentReference || null) : null,
         items: data.items.map((i: any) => ({
           description: i.description,
           quantity: Number(i.quantity) || 1,
@@ -188,8 +200,11 @@ export default function ReviewOCR() {
       };
 
       const token = await getToken();
-      const response = await fetch('/api/invoices', {
-        method: 'POST',
+      const endpoint = (isEditing && editingInvoiceId) ? `/api/invoices/${editingInvoiceId}` : '/api/invoices';
+      const method = (isEditing && editingInvoiceId) ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -203,13 +218,13 @@ export default function ReviewOCR() {
       }
 
       const savedInvoice = await response.json();
-      toast.success('Bill generated and saved to History!');
+      toast.success(isEditing ? 'Invoice updated in History!' : 'Bill generated and saved to History!');
 
       sessionStorage.setItem('finalInvoiceData', JSON.stringify(payload));
       sessionStorage.removeItem('extractedBillData');
       sessionStorage.removeItem('billImagePreview');
 
-      navigate('/bills/preview', { state: { invoiceData: payload, isSaved: true, invoiceId: savedInvoice.id } });
+      navigate('/bills/preview', { state: { invoiceData: payload, isSaved: true, invoiceId: savedInvoice.id || editingInvoiceId } });
     } catch (error: any) {
       console.error("Save invoice error:", error);
       toast.error(error.message || 'Failed to save invoice');
@@ -218,14 +233,20 @@ export default function ReviewOCR() {
     }
   };
 
-  if (!data) return <LoadingScreen message="Loading extracted data..." />;
+  if (!data) return <LoadingScreen message="Loading bill data..." />;
+
+  const isPaid = data.status === 'PAID';
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Review Extraction</h1>
-          <p className="text-gray-500 mt-1">Please verify and edit the AI extracted data before generating the invoice</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            {isEditing ? `Edit Invoice (${data.invoiceNumber || ''})` : 'Review & Generate Bill'}
+          </h1>
+          <p className="text-gray-500 mt-1">
+            {isEditing ? 'Make your adjustments and save changes to history' : 'Verify details, adjust items, set payment status, and generate your invoice'}
+          </p>
         </div>
       </div>
 
@@ -246,6 +267,7 @@ export default function ReviewOCR() {
 
         {/* Right Col - Editable Form */}
         <div className="space-y-6">
+          {/* Customer & Invoice Info */}
           <Card className="border-0 shadow-sm ring-1 ring-gray-100">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
               <CardTitle className="text-sm font-medium">Customer & Invoice Details</CardTitle>
@@ -253,11 +275,12 @@ export default function ReviewOCR() {
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="customerName">Customer Name</Label>
+                  <Label htmlFor="customerName">Customer Name *</Label>
                   <Input 
                     id="customerName" 
                     value={data.customerName || ''} 
                     onChange={(e) => updateField('customerName', e.target.value)} 
+                    placeholder="Enter customer name"
                     className="h-10"
                   />
                 </div>
@@ -267,6 +290,7 @@ export default function ReviewOCR() {
                     id="phone" 
                     value={data.phone || ''} 
                     onChange={(e) => updateField('phone', e.target.value)} 
+                    placeholder="+91 9876543210"
                   />
                 </div>
                 <div className="space-y-2">
@@ -283,14 +307,15 @@ export default function ReviewOCR() {
                     id="address" 
                     value={data.address || ''} 
                     onChange={(e) => updateField('address', e.target.value)} 
+                    placeholder="Customer billing address"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2 sm:col-span-1">
                   <Label htmlFor="date">Date</Label>
                   <Input 
                     id="date" 
                     type="date"
-                    value={data.date || ''} 
+                    value={data.date ? (data.date.includes('T') ? data.date.split('T')[0] : data.date) : ''} 
                     onChange={(e) => updateField('date', e.target.value)} 
                   />
                 </div>
@@ -298,9 +323,76 @@ export default function ReviewOCR() {
             </CardContent>
           </Card>
 
+          {/* Payment Status & Method Card */}
           <Card className="border-0 shadow-sm ring-1 ring-gray-100">
             <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">Items</CardTitle>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-gray-500" />
+                <CardTitle className="text-sm font-medium">Payment & Status</CardTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <label 
+                  htmlFor="paidCheckbox" 
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-colors ${
+                    isPaid ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-orange-100 text-orange-800 border border-orange-200'
+                  }`}
+                >
+                  {isPaid ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> : <Circle className="h-3.5 w-3.5 text-orange-500" />}
+                  <span>{isPaid ? 'PAID' : 'PENDING'}</span>
+                </label>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Mark as Paid</p>
+                  <p className="text-xs text-gray-500">Enable if the customer has completed payment</p>
+                </div>
+                <input 
+                  type="checkbox"
+                  id="paidCheckbox"
+                  checked={isPaid}
+                  onChange={(e) => updateField('status', e.target.checked ? 'PAID' : 'PENDING')}
+                  className="w-5 h-5 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                />
+              </div>
+
+              {isPaid && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentMethod">Payment Method</Label>
+                    <select
+                      id="paymentMethod"
+                      value={data.paymentMethod || 'Cash'}
+                      onChange={(e) => updateField('paymentMethod', e.target.value)}
+                      className="w-full h-10 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="Cash">Cash</option>
+                      <option value="UPI">UPI / QR Code</option>
+                      <option value="Card">Credit / Debit Card</option>
+                      <option value="Bank Transfer">Bank Transfer / NetBanking</option>
+                      <option value="Cheque">Cheque</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="paymentReference">Transaction ID / Ref (Optional)</Label>
+                    <Input 
+                      id="paymentReference"
+                      value={data.paymentReference || ''}
+                      onChange={(e) => updateField('paymentReference', e.target.value)}
+                      placeholder="e.g. UPI Ref / TXN12345"
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Items Table Card */}
+          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium">Items & Products</CardTitle>
               <Button size="sm" variant="outline" onClick={addItem} className="h-8">
                 <Plus className="mr-1 h-3 w-3" /> Add Item
               </Button>
@@ -323,6 +415,7 @@ export default function ReviewOCR() {
                         <Input 
                           value={item.description || ''} 
                           onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                          placeholder="Item name / description"
                           className="h-8 text-sm"
                         />
                       </TableCell>
@@ -343,7 +436,7 @@ export default function ReviewOCR() {
                         />
                       </TableCell>
                       <TableCell className="p-2">
-                        <span className="text-sm font-medium px-2">₹{Number(item.amount).toFixed(2)}</span>
+                        <span className="text-sm font-medium px-2">₹{Number(item.amount || 0).toFixed(2)}</span>
                       </TableCell>
                       <TableCell className="p-2 text-right">
                         <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -357,9 +450,10 @@ export default function ReviewOCR() {
             </CardContent>
           </Card>
 
+          {/* Totals & Actions Card */}
           <Card className="border-0 shadow-sm ring-1 ring-gray-100">
              <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-              <CardTitle className="text-sm font-medium">Totals</CardTitle>
+              <CardTitle className="text-sm font-medium">Summary & Total</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
                <div className="space-y-3 max-w-sm ml-auto">
@@ -368,7 +462,7 @@ export default function ReviewOCR() {
                    <span className="font-medium">₹{Number(data.subtotal || 0).toFixed(2)}</span>
                  </div>
                  <div className="flex justify-between items-center text-sm">
-                   <span className="text-gray-500">Discount</span>
+                   <span className="text-gray-500">Discount (₹)</span>
                    <Input 
                       type="number"
                       className="w-24 h-8 text-right"
@@ -377,7 +471,7 @@ export default function ReviewOCR() {
                    />
                  </div>
                  <div className="flex justify-between items-center text-sm">
-                   <span className="text-gray-500">Tax Amount</span>
+                   <span className="text-gray-500">Tax Amount (₹)</span>
                    <Input 
                       type="number"
                       className="w-24 h-8 text-right"
@@ -400,11 +494,11 @@ export default function ReviewOCR() {
                    {isSaving ? (
                      <>
                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                       Saving Bill to History...
+                       {isEditing ? 'Updating Bill in History...' : 'Saving Bill to History...'}
                      </>
                    ) : (
                      <>
-                       Generate Invoice
+                       {isEditing ? 'Update & Save Changes' : 'Generate Bill & Save'}
                        <ArrowRight className="ml-2 h-4 w-4" />
                      </>
                    )}
