@@ -25,15 +25,7 @@ import {
   CheckCircle2,
   Wand2,
   Layers,
-  Info,
   Upload,
-  ShieldCheck,
-  Users,
-  Lock,
-  Unlock,
-  FileText,
-  Clock,
-  AlertCircle,
   FileCode,
   X
 } from 'lucide-react';
@@ -198,16 +190,16 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
 
 const prebuiltCanvaTemplates = [
   {
-    name: 'Canva Modern Clean',
-    badge: 'Popular',
-    desc: 'Balanced spacing, soft gray container boxes, and sleek borders',
+    name: 'Standard Modern',
+    badge: 'Logo Left',
+    desc: 'Clean aesthetics with soft borders & spacious items table',
     color: '#18181b',
     design: defaultCanvaDesign
   },
   {
     name: 'Executive Dark Slate',
-    badge: 'Corporate',
-    desc: 'High contrast dark header and premium highlighted grand total',
+    badge: 'Dark Accent',
+    desc: 'High contrast solid dark header with highlighted grand total',
     color: '#0f172a',
     design: {
       canvasBg: '#ffffff',
@@ -227,8 +219,8 @@ const prebuiltCanvaTemplates = [
     }
   },
   {
-    name: 'Creative Sunset Gold',
-    badge: 'Creative',
+    name: 'Orange Classic',
+    badge: 'Custom Template',
     desc: 'Warm orange tones with classic serif typography and boxed cards',
     color: '#ea580c',
     design: {
@@ -250,8 +242,8 @@ const prebuiltCanvaTemplates = [
   },
   {
     name: 'Emerald Fresh',
-    badge: 'Fresh',
-    desc: 'Botanical green accents with centered header and rounded cards',
+    badge: 'Centered',
+    desc: 'Botanical green accents with centered company branding',
     color: '#059669',
     design: {
       canvasBg: '#ffffff',
@@ -269,6 +261,28 @@ const prebuiltCanvaTemplates = [
         { ...defaultCanvaDesign.elements[7], x: 520, y: 740, width: 240 },
       ]
     }
+  },
+  {
+    name: 'Corporate Royal',
+    badge: 'Professional',
+    desc: 'Prestigious blue theme with spacious table and boxed bank box',
+    color: '#2563eb',
+    design: {
+      canvasBg: '#ffffff',
+      primaryColor: '#2563eb',
+      fontFamily: 'sans' as const,
+      canvasHeight: 1050,
+      elements: [
+        { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#2563eb' },
+        { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#2563eb' },
+        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
+        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720 },
+        { ...defaultCanvaDesign.elements[4], x: 480, y: 540, width: 280, bgColor: '#2563eb', textColor: '#ffffff' },
+        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
+        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
+        { ...defaultCanvaDesign.elements[7], x: 520, y: 690, width: 240 },
+      ]
+    }
   }
 ];
 
@@ -276,7 +290,7 @@ export default function Settings() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<'canva' | 'profile' | 'permissions'>('canva');
+  const [activeTab, setActiveTab] = useState<'canva' | 'profile'>('canva');
   
   // Organization profile states
   const [companyName, setCompanyName] = useState('');
@@ -333,18 +347,6 @@ export default function Settings() {
     queryFn: async () => {
       const token = await getToken();
       const res = await fetch('/api/custom-layout-requests', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) return [];
-      return res.json().catch(() => []);
-    }
-  });
-
-  const { data: teamMembers, refetch: refetchTeam } = useQuery({
-    queryKey: ['teamMembers'],
-    queryFn: async () => {
-      const token = await getToken();
-      const res = await fetch('/api/team', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) return [];
@@ -455,27 +457,6 @@ export default function Settings() {
       toast.error(err.message || 'Failed to submit design request');
     } finally {
       setIsSubmittingCustom(false);
-    }
-  };
-
-  // Update team member permission
-  const handleUpdatePermission = async (userId: number, updates: any) => {
-    try {
-      const token = await getToken();
-      const res = await fetch(`/api/team/${userId}/permissions`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(updates),
-      });
-
-      if (!res.ok) throw new Error('Failed to update member permissions');
-      toast.success('Member permissions updated successfully!');
-      refetchTeam();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update permissions');
     }
   };
 
@@ -600,7 +581,7 @@ export default function Settings() {
             <h1 className="text-xl font-black text-gray-900 tracking-tight">Organization & Bill Settings</h1>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Customize invoice layout, organization profile, custom templates, and user access permissions
+            Customize invoice layout, organization profile, and custom template requests
           </p>
         </div>
 
@@ -625,16 +606,6 @@ export default function Settings() {
             >
               <Building2 className="w-3.5 h-3.5 inline-block mr-1 text-blue-600" />
               Company Details
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('permissions')}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'permissions' ? 'bg-white text-black shadow-xs' : 'text-gray-600 hover:text-black'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 inline-block mr-1 text-green-600" />
-              Access & Permissions
             </button>
           </div>
 
@@ -697,7 +668,7 @@ export default function Settings() {
               {/* 1. TEMPLATES & CUSTOM TEMPLATE REQUEST PANEL */}
               {sidebarPanel === 'templates' && (
                 <div className="space-y-4">
-                  {/* Custom Bill Layout Upload Section (Restored as requested) */}
+                  {/* Custom Bill Layout Upload Section */}
                   <div className="p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/40 space-y-2.5">
                     <div className="flex items-start gap-2.5">
                       <div className="p-2 bg-amber-100 rounded-lg text-amber-700 shrink-0 mt-0.5">
@@ -1363,150 +1334,6 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* TAB 3: ACCESS & PERMISSIONS CONTROL (READ, WRITE, LAYOUT ACCESS) */}
-      {activeTab === 'permissions' && (
-        <div className="space-y-6 max-w-5xl">
-          {/* Permissions Overview Cards */}
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Card className="border border-blue-100 bg-blue-50/40 shadow-xs">
-              <CardContent className="p-4 flex items-start gap-3">
-                <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
-                  <Eye className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-blue-950">Read Access</h4>
-                  <p className="text-[11px] text-blue-800 mt-0.5">Can view dashboard metrics, history list, and download PDFs</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-emerald-100 bg-emerald-50/40 shadow-xs">
-              <CardContent className="p-4 flex items-start gap-3">
-                <div className="p-2 bg-emerald-100 text-emerald-700 rounded-xl">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-emerald-950">Write Access</h4>
-                  <p className="text-[11px] text-emerald-800 mt-0.5">Can upload receipts, edit line items, and generate invoices</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-purple-100 bg-purple-50/40 shadow-xs">
-              <CardContent className="p-4 flex items-start gap-3">
-                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
-                  <Palette className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-purple-950">Layout Customizer Access</h4>
-                  <p className="text-[11px] text-purple-800 mt-0.5">Can rearrange canvas sections, change styles, and save layouts</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Team Members Permissions Table */}
-          <Card className="border-0 shadow-sm ring-1 ring-gray-100">
-            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold text-gray-900">Team Members & Access Controls</CardTitle>
-                <CardDescription className="text-xs">Manage Read, Write, and Layout Customization permissions per user</CardDescription>
-              </div>
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700">
-                {teamMembers?.length || 0} Members
-              </span>
-            </CardHeader>
-            <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b bg-gray-50/70 text-gray-600">
-                    <th className="py-3 px-4 font-bold">User</th>
-                    <th className="py-3 px-3 font-bold">Role</th>
-                    <th className="py-3 px-3 font-bold text-center">Read Access</th>
-                    <th className="py-3 px-3 font-bold text-center">Write Access</th>
-                    <th className="py-3 px-3 font-bold text-center">Layout Access</th>
-                    <th className="py-3 px-3 font-bold text-center">Customers</th>
-                    <th className="py-3 px-4 font-bold text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {teamMembers && teamMembers.length > 0 ? (
-                    teamMembers.map((member: any) => (
-                      <tr key={member.id} className="hover:bg-gray-50/50">
-                        <td className="py-3 px-4">
-                          <p className="font-bold text-gray-900">{member.name || member.email?.split('@')[0]}</p>
-                          <p className="text-[11px] text-gray-500 font-mono">{member.email}</p>
-                        </td>
-                        <td className="py-3 px-3">
-                          <select
-                            value={member.role}
-                            onChange={(e) => handleUpdatePermission(member.id, { role: e.target.value })}
-                            className="text-xs border rounded-lg px-2 py-1 bg-white font-semibold text-gray-800 focus:ring-1 focus:ring-black"
-                          >
-                            <option value="SUPER_ADMIN">Super Admin</option>
-                            <option value="ADMIN">Admin</option>
-                            <option value="EMPLOYEE">Employee</option>
-                          </select>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <input 
-                            type="checkbox"
-                            checked={member.canReadInvoices !== false}
-                            onChange={(e) => handleUpdatePermission(member.id, { canReadInvoices: e.target.checked })}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <input 
-                            type="checkbox"
-                            checked={member.canWriteInvoices !== false}
-                            onChange={(e) => handleUpdatePermission(member.id, { canWriteInvoices: e.target.checked })}
-                            className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-600 cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <input 
-                            type="checkbox"
-                            checked={member.canCustomizeLayout !== false}
-                            onChange={(e) => handleUpdatePermission(member.id, { canCustomizeLayout: e.target.checked })}
-                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-600 cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <input 
-                            type="checkbox"
-                            checked={member.canManageCustomers !== false}
-                            onChange={(e) => handleUpdatePermission(member.id, { canManageCustomers: e.target.checked })}
-                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-                          />
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleUpdatePermission(member.id, { isActive: !member.isActive })}
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              member.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {member.isActive !== false ? 'Active' : 'Disabled'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500">
-                        No team members registered yet
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </div>
       )}
 
       {/* Upload Custom Design Request Modal */}
