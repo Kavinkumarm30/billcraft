@@ -13,28 +13,33 @@ import {
   LayoutTemplate, 
   Building2, 
   Check, 
-  Sparkles,
-  Move,
-  Trash2,
-  Eye,
-  EyeOff,
-  RotateCcw,
-  Maximize2,
-  ZoomIn,
-  ZoomOut,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Bold,
-  Plus,
-  Sliders,
-  CheckCircle2
+  Sparkles, 
+  Move, 
+  Trash2, 
+  Eye, 
+  EyeOff, 
+  RotateCcw, 
+  ZoomIn, 
+  ZoomOut, 
+  AlignLeft, 
+  AlignCenter, 
+  AlignRight, 
+  Plus, 
+  CheckCircle2,
+  Wand2,
+  Layers,
+  Square,
+  CircleDot,
+  SlidersHorizontal,
+  ChevronRight,
+  Info,
+  Maximize2
 } from 'lucide-react';
 
 export interface CanvasElement {
   id: string;
   name: string;
-  type: 'company_header' | 'invoice_meta' | 'billed_to' | 'items_table' | 'totals_card' | 'bank_details' | 'signature_block' | 'notes_terms' | 'custom_banner';
+  type: 'company_header' | 'invoice_meta' | 'billed_to' | 'items_table' | 'totals_card' | 'bank_details' | 'signature_block' | 'notes_terms';
   x: number; // in pixels relative to 800px width canvas
   y: number; // in pixels
   width: number; // in pixels
@@ -80,7 +85,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
     },
     {
       id: 'invoice_meta',
-      name: 'Invoice Title & Details',
+      name: 'Invoice Title & Meta',
       type: 'invoice_meta',
       x: 480,
       y: 40,
@@ -97,7 +102,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
       name: 'Billed To (Customer Details)',
       type: 'billed_to',
       x: 40,
-      y: 175,
+      y: 160,
       width: 720,
       fontSize: 13,
       textColor: '#1f2937',
@@ -114,7 +119,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
       name: 'Products & Items Table',
       type: 'items_table',
       x: 40,
-      y: 310,
+      y: 290,
       width: 720,
       fontSize: 13,
       textColor: '#1f2937',
@@ -130,7 +135,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
       name: 'Subtotal & Grand Total',
       type: 'totals_card',
       x: 480,
-      y: 570,
+      y: 540,
       width: 280,
       fontSize: 13,
       textColor: '#111827',
@@ -147,7 +152,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
       name: 'Bank & UPI Payment Info',
       type: 'bank_details',
       x: 40,
-      y: 570,
+      y: 540,
       width: 410,
       fontSize: 12,
       textColor: '#374151',
@@ -164,7 +169,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
       name: 'Notes & Terms',
       type: 'notes_terms',
       x: 40,
-      y: 720,
+      y: 690,
       width: 440,
       fontSize: 12,
       textColor: '#6b7280',
@@ -177,7 +182,7 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
       name: 'Authorized Signature',
       type: 'signature_block',
       x: 520,
-      y: 720,
+      y: 690,
       width: 240,
       fontSize: 12,
       textColor: '#4b5563',
@@ -188,15 +193,19 @@ export const defaultCanvaDesign: CanvaLayoutDesign = {
   ]
 };
 
-const prebuiltCanvaTemplates: { name: string; desc: string; design: CanvaLayoutDesign }[] = [
+const prebuiltCanvaTemplates: { name: string; desc: string; badge: string; color: string; design: CanvaLayoutDesign }[] = [
   {
-    name: 'Canva Modern Minimalist',
-    desc: 'Clean aesthetics with soft borders & spacious layout',
+    name: 'Canva Modern Clean',
+    badge: 'Popular',
+    desc: 'Balanced spacing, soft gray container boxes, and sleek borders',
+    color: '#18181b',
     design: defaultCanvaDesign
   },
   {
-    name: 'Executive Dark Header',
-    desc: 'Bold dark top banner with high-contrast summary',
+    name: 'Executive Dark Slate',
+    badge: 'Corporate',
+    desc: 'High contrast dark header and premium highlighted grand total',
+    color: '#0f172a',
     design: {
       canvasBg: '#ffffff',
       primaryColor: '#0f172a',
@@ -205,18 +214,20 @@ const prebuiltCanvaTemplates: { name: string; desc: string; design: CanvaLayoutD
       elements: [
         { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 420 },
         { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#0f172a' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 170, width: 720, bgColor: '#f8fafc', borderColor: '#cbd5e1' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 310, width: 720 },
-        { ...defaultCanvaDesign.elements[4], x: 470, y: 570, width: 290, bgColor: '#0f172a', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 570, width: 410, bgColor: '#f8fafc' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 720, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 530, y: 720, width: 230 },
+        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, bgColor: '#f8fafc', borderColor: '#cbd5e1' },
+        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720 },
+        { ...defaultCanvaDesign.elements[4], x: 470, y: 540, width: 290, bgColor: '#0f172a', textColor: '#ffffff' },
+        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#f8fafc' },
+        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
+        { ...defaultCanvaDesign.elements[7], x: 530, y: 690, width: 230 },
       ]
     }
   },
   {
-    name: 'Creative Sunset Orange',
-    desc: 'Warm orange accents with elegant serif headers',
+    name: 'Creative Sunset Gold',
+    badge: 'Creative',
+    desc: 'Warm orange tones with classic serif typography and boxed cards',
+    color: '#ea580c',
     design: {
       canvasBg: '#ffffff',
       primaryColor: '#ea580c',
@@ -225,32 +236,56 @@ const prebuiltCanvaTemplates: { name: string; desc: string; design: CanvaLayoutD
       elements: [
         { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#ea580c' },
         { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#ea580c' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 170, width: 720, borderColor: '#fdba74', bgColor: '#fff7ed' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 305, width: 720, borderColor: '#ea580c' },
-        { ...defaultCanvaDesign.elements[4], x: 480, y: 565, width: 280, bgColor: '#ea580c', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 565, width: 410, bgColor: '#fff7ed', borderColor: '#fdba74' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 720, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 520, y: 720, width: 240 },
+        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, borderColor: '#fdba74', bgColor: '#fff7ed' },
+        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720, borderColor: '#ea580c' },
+        { ...defaultCanvaDesign.elements[4], x: 480, y: 540, width: 280, bgColor: '#ea580c', textColor: '#ffffff' },
+        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#fff7ed', borderColor: '#fdba74' },
+        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
+        { ...defaultCanvaDesign.elements[7], x: 520, y: 690, width: 240 },
       ]
     }
   },
   {
-    name: 'Emerald Corporate',
-    desc: 'Fresh botanical green theme with centered header',
+    name: 'Emerald Fresh',
+    badge: 'Fresh',
+    desc: 'Botanical green accents with centered header and rounded cards',
+    color: '#059669',
     design: {
       canvasBg: '#ffffff',
       primaryColor: '#059669',
       fontFamily: 'sans',
       canvasHeight: 1050,
       elements: [
-        { ...defaultCanvaDesign.elements[0], x: 200, y: 40, width: 400, textAlign: 'center' },
-        { ...defaultCanvaDesign.elements[1], x: 200, y: 155, width: 400, textAlign: 'center' },
-        { ...defaultCanvaDesign.elements[2], x: 40, y: 245, width: 720, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
-        { ...defaultCanvaDesign.elements[3], x: 40, y: 375, width: 720 },
-        { ...defaultCanvaDesign.elements[4], x: 480, y: 620, width: 280, bgColor: '#059669', textColor: '#ffffff' },
-        { ...defaultCanvaDesign.elements[5], x: 40, y: 620, width: 410, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
-        { ...defaultCanvaDesign.elements[6], x: 40, y: 760, width: 440 },
-        { ...defaultCanvaDesign.elements[7], x: 520, y: 760, width: 240 },
+        { ...defaultCanvaDesign.elements[0], x: 200, y: 35, width: 400, textAlign: 'center' },
+        { ...defaultCanvaDesign.elements[1], x: 200, y: 140, width: 400, textAlign: 'center' },
+        { ...defaultCanvaDesign.elements[2], x: 40, y: 230, width: 720, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
+        { ...defaultCanvaDesign.elements[3], x: 40, y: 360, width: 720 },
+        { ...defaultCanvaDesign.elements[4], x: 480, y: 600, width: 280, bgColor: '#059669', textColor: '#ffffff' },
+        { ...defaultCanvaDesign.elements[5], x: 40, y: 600, width: 410, bgColor: '#ecfdf5', borderColor: '#a7f3d0' },
+        { ...defaultCanvaDesign.elements[6], x: 40, y: 740, width: 440 },
+        { ...defaultCanvaDesign.elements[7], x: 520, y: 740, width: 240 },
+      ]
+    }
+  },
+  {
+    name: 'Royal Sapphire',
+    badge: 'Luxury',
+    desc: 'Prestigious blue theme with spacious table and boxed bank box',
+    color: '#2563eb',
+    design: {
+      canvasBg: '#ffffff',
+      primaryColor: '#2563eb',
+      fontFamily: 'sans',
+      canvasHeight: 1050,
+      elements: [
+        { ...defaultCanvaDesign.elements[0], x: 40, y: 40, width: 400, textColor: '#2563eb' },
+        { ...defaultCanvaDesign.elements[1], x: 480, y: 40, width: 280, textColor: '#2563eb' },
+        { ...defaultCanvaDesign.elements[2], x: 40, y: 160, width: 720, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
+        { ...defaultCanvaDesign.elements[3], x: 40, y: 290, width: 720 },
+        { ...defaultCanvaDesign.elements[4], x: 480, y: 540, width: 280, bgColor: '#2563eb', textColor: '#ffffff' },
+        { ...defaultCanvaDesign.elements[5], x: 40, y: 540, width: 410, bgColor: '#eff6ff', borderColor: '#bfdbfe' },
+        { ...defaultCanvaDesign.elements[6], x: 40, y: 690, width: 440 },
+        { ...defaultCanvaDesign.elements[7], x: 520, y: 690, width: 240 },
       ]
     }
   }
@@ -276,9 +311,9 @@ export default function Settings() {
 
   // Canva Designer state
   const [design, setDesign] = useState<CanvaLayoutDesign>(defaultCanvaDesign);
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [sidebarPanel, setSidebarPanel] = useState<'elements' | 'templates' | 'styles'>('elements');
+  const [selectedElementId, setSelectedElementId] = useState<string | null>('company_header');
+  const [zoomLevel, setZoomLevel] = useState<number>(0.85);
+  const [sidebarPanel, setSidebarPanel] = useState<'templates' | 'elements' | 'styles'>('templates');
 
   // Dragging state
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -412,17 +447,17 @@ export default function Settings() {
         if (el.id !== dragTargetIdRef.current) return el;
         
         if (isDraggingRef.current) {
-          // Snap to 5px grid for clean alignment
+          // Snap to 10px grid for smooth, clean beginner positioning
           const rawX = dragStartPosRef.current.elemX + deltaX;
           const rawY = dragStartPosRef.current.elemY + deltaY;
-          const snappedX = Math.max(10, Math.min(790 - el.width, Math.round(rawX / 5) * 5));
-          const snappedY = Math.max(10, Math.min(prev.canvasHeight - 50, Math.round(rawY / 5) * 5));
+          const snappedX = Math.max(20, Math.min(780 - el.width, Math.round(rawX / 10) * 10));
+          const snappedY = Math.max(20, Math.min(prev.canvasHeight - 50, Math.round(rawY / 10) * 10));
           return { ...el, x: snappedX, y: snappedY };
         }
 
         if (isResizingRef.current) {
           const rawW = dragStartPosRef.current.elemWidth + deltaX;
-          const snappedW = Math.max(150, Math.min(780 - el.x, Math.round(rawW / 5) * 5));
+          const snappedW = Math.max(160, Math.min(780 - el.x, Math.round(rawW / 10) * 10));
           return { ...el, width: snappedW };
         }
 
@@ -432,7 +467,7 @@ export default function Settings() {
     });
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
+  const handlePointerUp = () => {
     isDraggingRef.current = false;
     isResizingRef.current = false;
     dragTargetIdRef.current = null;
@@ -444,6 +479,34 @@ export default function Settings() {
       ...prev,
       elements: prev.elements.map(el => el.id === selectedElementId ? { ...el, ...updates } : el)
     }));
+  };
+
+  // 1-Click Auto Align Magic function (Beginner Friendly)
+  const handleAutoAlign = () => {
+    setDesign(prev => ({
+      ...prev,
+      elements: [
+        { ...prev.elements[0], x: 40, y: 40, width: 400, textAlign: 'left' },
+        { ...prev.elements[1], x: 480, y: 40, width: 280, textAlign: 'right' },
+        { ...prev.elements[2], x: 40, y: 160, width: 720 },
+        { ...prev.elements[3], x: 40, y: 290, width: 720 },
+        { ...prev.elements[4], x: 480, y: 540, width: 280 },
+        { ...prev.elements[5], x: 40, y: 540, width: 410 },
+        { ...prev.elements[6], x: 40, y: 690, width: 440 },
+        { ...prev.elements[7], x: 520, y: 690, width: 240, textAlign: 'center' },
+      ]
+    }));
+    toast.success('✨ Auto-Aligned all bill sections with perfect professional spacing!');
+  };
+
+  // Center Element Horizontally
+  const handleCenterElement = () => {
+    if (!selectedElementId) return;
+    const elem = design.elements.find(el => el.id === selectedElementId);
+    if (!elem) return;
+    const centeredX = Math.round((800 - elem.width) / 20) * 10;
+    updateSelectedElement({ x: centeredX });
+    toast.success(`Centered "${elem.name}" on canvas`);
   };
 
   const selectedElem = design.elements.find(el => el.id === selectedElementId);
@@ -458,16 +521,19 @@ export default function Settings() {
 
   return (
     <div className="space-y-4 max-w-full">
-      {/* Header Bar */}
-      <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* Top Header Navigation */}
+      <div className="p-4 sm:p-6 bg-white border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
-              Canva Studio Editor
+          <div className="flex items-center gap-2.5">
+            <span className="px-3 py-1 rounded-full text-xs font-black bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-xs">
+              CANVA STUDIO
             </span>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Invoice Design Studio</h1>
+            <h1 className="text-xl font-black text-gray-900 tracking-tight">Visual Bill Designer</h1>
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">Click & drag any invoice section anywhere on the canvas just like Canva</p>
+          <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
+            <Info className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+            <span>Click & drag any box to move it anywhere. Use <strong>1-Click Templates</strong> for instant professional designs!</span>
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -475,22 +541,22 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => setActiveTab('canva')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'canva' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'canva' ? 'bg-white text-black shadow-xs' : 'text-gray-600 hover:text-black'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 inline-block mr-1 text-purple-600" />
-              Canva Editor
+              Canva Designer
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('profile')}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                activeTab === 'profile' ? 'bg-white text-black shadow-sm' : 'text-gray-600 hover:text-black'
+              className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                activeTab === 'profile' ? 'bg-white text-black shadow-xs' : 'text-gray-600 hover:text-black'
               }`}
             >
               <Building2 className="w-3.5 h-3.5 inline-block mr-1 text-blue-600" />
-              Company Profile
+              Company Details
             </button>
           </div>
 
@@ -498,7 +564,7 @@ export default function Settings() {
             <Button 
               onClick={handleSaveDesign} 
               disabled={mutation.isPending} 
-              className="bg-black hover:bg-gray-800 text-white text-xs font-semibold px-4 h-9 shadow-sm"
+              className="bg-black hover:bg-gray-800 text-white text-xs font-bold px-5 h-9 shadow-md transition-transform active:scale-95"
             >
               {mutation.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
               Save Design
@@ -508,64 +574,114 @@ export default function Settings() {
       </div>
 
       {activeTab === 'canva' && (
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] min-h-[700px] border border-gray-200 bg-gray-100 rounded-xl overflow-hidden shadow-sm">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-135px)] min-h-[720px] border border-gray-200 bg-gray-100 rounded-2xl overflow-hidden shadow-sm">
           
-          {/* Canva Left Sidebar */}
+          {/* Canva Left Control Sidebar */}
           <div className="w-full lg:w-80 bg-white border-r border-gray-200 flex flex-col shrink-0">
-            {/* Sidebar Tabs */}
-            <div className="flex border-b border-gray-100 bg-gray-50/70 p-1.5 gap-1">
-              <button
-                type="button"
-                onClick={() => setSidebarPanel('elements')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                  sidebarPanel === 'elements' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
-                }`}
-              >
-                Elements
-              </button>
+            {/* Sidebar Navigation */}
+            <div className="flex border-b border-gray-100 bg-gray-50/80 p-1.5 gap-1">
               <button
                 type="button"
                 onClick={() => setSidebarPanel('templates')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                  sidebarPanel === 'templates' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  sidebarPanel === 'templates' ? 'bg-white text-purple-700 shadow-xs' : 'text-gray-500 hover:text-black'
                 }`}
               >
+                <LayoutTemplate className="w-3.5 h-3.5" />
                 Templates
               </button>
               <button
                 type="button"
-                onClick={() => setSidebarPanel('styles')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                  sidebarPanel === 'styles' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+                onClick={() => setSidebarPanel('elements')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  sidebarPanel === 'elements' ? 'bg-white text-purple-700 shadow-xs' : 'text-gray-500 hover:text-black'
                 }`}
               >
-                Styles
+                <Layers className="w-3.5 h-3.5" />
+                Elements
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidebarPanel('styles')}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  sidebarPanel === 'styles' ? 'bg-white text-purple-700 shadow-xs' : 'text-gray-500 hover:text-black'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" />
+                Themes
               </button>
             </div>
 
-            {/* Sidebar Content Area */}
+            {/* Sidebar Panel Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               
-              {/* ELEMENTS PANEL */}
+              {/* 1. TEMPLATES PANEL */}
+              {sidebarPanel === 'templates' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Pro Templates</p>
+                    <span className="text-[10px] text-purple-600 font-bold bg-purple-50 px-2 py-0.5 rounded">Beginner Friendly</span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {prebuiltCanvaTemplates.map((t, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setDesign(t.design);
+                          toast.success(`Applied "${t.name}"! You can drag elements around to customize further.`);
+                        }}
+                        className="group p-3 rounded-xl border border-gray-200 hover:border-purple-600 cursor-pointer bg-white transition-all hover:shadow-md relative overflow-hidden"
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-black text-gray-900 group-hover:text-purple-600 transition-colors">
+                            {t.name}
+                          </span>
+                          <span 
+                            className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-xs"
+                            style={{ backgroundColor: t.color }}
+                          >
+                            {t.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 leading-tight">{t.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. ELEMENTS PANEL */}
               {sidebarPanel === 'elements' && (
                 <div className="space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Canvas Elements</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-black uppercase tracking-wider text-gray-400">Invoice Blocks</p>
+                    <button
+                      type="button"
+                      onClick={handleAutoAlign}
+                      className="text-[11px] text-purple-700 font-bold flex items-center gap-1 hover:underline"
+                    >
+                      <Wand2 className="w-3 h-3" /> Auto-Align
+                    </button>
+                  </div>
+
                   <div className="space-y-2">
                     {design.elements.map((elem) => (
                       <div
                         key={elem.id}
                         onClick={() => setSelectedElementId(elem.id)}
                         className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                          selectedElementId === elem.id ? 'border-purple-600 bg-purple-50/50 shadow-sm' : 'border-gray-200 hover:bg-gray-50'
+                          selectedElementId === elem.id ? 'border-purple-600 bg-purple-50/70 shadow-xs ring-1 ring-purple-600' : 'border-gray-200 hover:bg-gray-50'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <Move className="w-3.5 h-3.5 text-gray-400" />
                           <div>
-                            <p className="text-xs font-semibold text-gray-900">{elem.name}</p>
-                            <p className="text-[10px] text-gray-400">Position: ({elem.x}px, {elem.y}px)</p>
+                            <p className="text-xs font-bold text-gray-900">{elem.name}</p>
+                            <p className="text-[10px] text-gray-400 font-mono">({elem.x}px, {elem.y}px)</p>
                           </div>
                         </div>
+
                         <button
                           type="button"
                           onClick={(e) => {
@@ -575,10 +691,10 @@ export default function Settings() {
                               elements: prev.elements.map(el => el.id === elem.id ? { ...el, visible: !el.visible } : el)
                             }));
                           }}
-                          className="p-1 hover:bg-gray-200 rounded text-gray-500"
-                          title={elem.visible ? 'Hide' : 'Show'}
+                          className="p-1 hover:bg-gray-200 rounded text-gray-500 transition-colors"
+                          title={elem.visible ? 'Hide from canvas' : 'Show on canvas'}
                         >
-                          {elem.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5 text-red-500" />}
+                          {elem.visible ? <Eye className="w-4 h-4 text-gray-600" /> : <EyeOff className="w-4 h-4 text-red-500" />}
                         </button>
                       </div>
                     ))}
@@ -586,72 +702,62 @@ export default function Settings() {
                 </div>
               )}
 
-              {/* TEMPLATES PANEL */}
-              {sidebarPanel === 'templates' && (
-                <div className="space-y-3">
-                  <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Pre-built Canva Layouts</p>
-                  <div className="space-y-3">
-                    {prebuiltCanvaTemplates.map((t, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setDesign(t.design);
-                          toast.success(`Loaded "${t.name}"! You can drag elements around to customize further.`);
-                        }}
-                        className="p-3 rounded-xl border border-gray-200 hover:border-black cursor-pointer bg-white transition-all hover:shadow-sm"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-gray-900">{t.name}</span>
-                          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: t.design.primaryColor }}></span>
-                        </div>
-                        <p className="text-[11px] text-gray-500">{t.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* STYLES PANEL */}
+              {/* 3. THEMES & STYLES PANEL */}
               {sidebarPanel === 'styles' && (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Primary Brand Accent</Label>
+                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Theme Color Swatches</Label>
                     <div className="flex flex-wrap gap-2 items-center">
-                      {['#18181b', '#2563eb', '#059669', '#ea580c', '#dc2626', '#7c3aed', '#0891b2'].map(hex => (
+                      {[
+                        { name: 'Obsidian', hex: '#18181b' },
+                        { name: 'Royal Blue', hex: '#2563eb' },
+                        { name: 'Emerald', hex: '#059669' },
+                        { name: 'Sunset', hex: '#ea580c' },
+                        { name: 'Ruby', hex: '#dc2626' },
+                        { name: 'Purple', hex: '#7c3aed' },
+                        { name: 'Amber', hex: '#d97706' },
+                        { name: 'Cyan', hex: '#0891b2' },
+                      ].map(swatch => (
                         <button
-                          key={hex}
+                          key={swatch.hex}
                           type="button"
-                          onClick={() => setDesign(p => ({ ...p, primaryColor: hex }))}
-                          className={`w-7 h-7 rounded-full transition-transform hover:scale-110 ${
-                            design.primaryColor === hex ? 'ring-2 ring-offset-2 ring-black scale-110' : ''
+                          onClick={() => setDesign(p => ({ ...p, primaryColor: swatch.hex }))}
+                          className={`w-7 h-7 rounded-full transition-transform hover:scale-110 shadow-xs flex items-center justify-center ${
+                            design.primaryColor === swatch.hex ? 'ring-2 ring-offset-2 ring-black scale-110' : ''
                           }`}
-                          style={{ backgroundColor: hex }}
-                        />
+                          style={{ backgroundColor: swatch.hex }}
+                          title={swatch.name}
+                        >
+                          {design.primaryColor === swatch.hex && <Check className="w-3.5 h-3.5 text-white" />}
+                        </button>
                       ))}
-                      <input 
-                        type="color" 
-                        value={design.primaryColor}
-                        onChange={(e) => setDesign(p => ({ ...p, primaryColor: e.target.value }))}
-                        className="w-7 h-7 rounded cursor-pointer border-0 bg-transparent" 
-                      />
+                      <div className="flex items-center gap-1 border rounded-lg px-2 py-1 bg-gray-50 ml-1">
+                        <input 
+                          type="color" 
+                          value={design.primaryColor}
+                          onChange={(e) => setDesign(p => ({ ...p, primaryColor: e.target.value }))}
+                          className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent" 
+                        />
+                        <span className="text-[10px] font-mono font-bold uppercase">{design.primaryColor}</span>
+                      </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Typography Font</Label>
+                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Typography Font Pairing</Label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {[
-                        { id: 'sans', label: 'Sans' },
-                        { id: 'serif', label: 'Serif' },
-                        { id: 'mono', label: 'Mono' }
+                        { id: 'sans', label: 'Modern Sans', font: 'font-sans' },
+                        { id: 'serif', label: 'Classic Serif', font: 'font-serif' },
+                        { id: 'mono', label: 'Tech Mono', font: 'font-mono' }
                       ].map(f => (
                         <button
                           key={f.id}
                           type="button"
                           onClick={() => setDesign(p => ({ ...p, fontFamily: f.id as any }))}
-                          className={`py-2 text-xs font-semibold rounded-lg border text-center transition-all ${
-                            design.fontFamily === f.id ? 'border-black bg-black text-white' : 'border-gray-200 hover:bg-gray-50'
-                          }`}
+                          className={`py-2 text-xs font-bold rounded-lg border text-center transition-all ${
+                            design.fontFamily === f.id ? 'border-black bg-black text-white shadow-xs' : 'border-gray-200 hover:bg-gray-50'
+                          } ${f.font}`}
                         >
                           {f.label}
                         </button>
@@ -659,16 +765,16 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-400">Canvas Page Height</Label>
+                  <div className="space-y-2 pt-2 border-t border-gray-100">
+                    <Label className="text-xs font-black uppercase tracking-wider text-gray-400">Canvas Page Height</Label>
                     <div className="flex items-center gap-2">
                       <Input 
                         type="number"
                         value={design.canvasHeight}
                         onChange={(e) => setDesign(p => ({ ...p, canvasHeight: Math.max(800, parseInt(e.target.value) || 1050) }))}
-                        className="h-8 text-xs"
+                        className="h-8 text-xs font-mono font-bold"
                       />
-                      <span className="text-xs text-gray-500">px</span>
+                      <span className="text-xs text-gray-500 font-semibold">px (A4 Height)</span>
                     </div>
                   </div>
                 </div>
@@ -677,21 +783,48 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Canva Canvas Workspace */}
+          {/* Canva Canvas Workspace & Top Bar */}
           <div className="flex-1 flex flex-col overflow-hidden">
             
-            {/* Canva Top Action Toolbar */}
-            <div className="p-2.5 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 shadow-xs z-10">
+            {/* Canva Top Floating Toolbar */}
+            <div className="p-2 px-4 bg-white border-b border-gray-200 flex flex-wrap items-center justify-between gap-3 shadow-xs z-10">
               
+              {/* Quick Actions & Magic Auto-Align */}
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={handleAutoAlign}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-bold border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-900 shadow-xs"
+                >
+                  <Wand2 className="w-3.5 h-3.5 mr-1" />
+                  Auto-Align
+                </Button>
+
+                {selectedElem && (
+                  <Button
+                    type="button"
+                    onClick={handleCenterElement}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs font-medium text-gray-700 hover:bg-gray-100"
+                  >
+                    <AlignCenter className="w-3.5 h-3.5 mr-1" />
+                    Center Element
+                  </Button>
+                )}
+              </div>
+
               {/* Selected Element Quick Formatting Bar */}
-              {selectedElem ? (
-                <div className="flex items-center gap-2 flex-wrap text-xs">
-                  <span className="font-bold text-gray-800 bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-200">
+              {selectedElem && (
+                <div className="flex items-center gap-2 flex-wrap text-xs bg-gray-50 p-1 rounded-xl border border-gray-200">
+                  <span className="font-black text-gray-800 px-2 py-0.5 rounded bg-white text-xs shadow-2xs">
                     {selectedElem.name}
                   </span>
 
-                  {/* Text Alignment */}
-                  <div className="flex border rounded-lg overflow-hidden">
+                  {/* Alignment */}
+                  <div className="flex border rounded-lg bg-white overflow-hidden">
                     <button
                       type="button"
                       onClick={() => updateSelectedElement({ textAlign: 'left' })}
@@ -718,89 +851,68 @@ export default function Settings() {
                     </button>
                   </div>
 
-                  {/* Font Size */}
-                  <div className="flex items-center gap-1 border rounded-lg px-2 py-0.5 bg-white">
-                    <span className="text-gray-400 text-[10px]">Size:</span>
-                    <input 
-                      type="number" 
-                      value={selectedElem.fontSize || 13}
-                      onChange={(e) => updateSelectedElement({ fontSize: parseInt(e.target.value) || 12 })}
-                      className="w-10 text-xs text-center border-0 p-0 focus:outline-none"
-                    />
-                  </div>
-
                   {/* Text Color */}
-                  <div className="flex items-center gap-1 border rounded-lg px-2 py-0.5 bg-white">
-                    <span className="text-gray-400 text-[10px]">Color:</span>
+                  <div className="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
+                    <span className="text-gray-400 text-[10px] font-bold">Text:</span>
                     <input 
                       type="color" 
                       value={selectedElem.textColor || '#000000'}
                       onChange={(e) => updateSelectedElement({ textColor: e.target.value })}
-                      className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent"
+                      className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
                     />
                   </div>
 
                   {/* Bg Color */}
-                  <div className="flex items-center gap-1 border rounded-lg px-2 py-0.5 bg-white">
-                    <span className="text-gray-400 text-[10px]">Bg:</span>
+                  <div className="flex items-center gap-1 bg-white border rounded-lg px-2 py-1">
+                    <span className="text-gray-400 text-[10px] font-bold">Bg:</span>
                     <input 
                       type="color" 
                       value={selectedElem.bgColor && selectedElem.bgColor !== 'transparent' ? selectedElem.bgColor : '#ffffff'}
                       onChange={(e) => updateSelectedElement({ bgColor: e.target.value })}
-                      className="w-5 h-5 rounded cursor-pointer border-0 bg-transparent"
+                      className="w-4 h-4 rounded cursor-pointer border-0 bg-transparent"
                     />
                     <button 
                       type="button" 
                       onClick={() => updateSelectedElement({ bgColor: 'transparent' })}
-                      className="text-[10px] text-gray-500 hover:text-black"
+                      className="text-[10px] text-gray-500 hover:text-black font-semibold ml-0.5"
                     >
                       Clear
                     </button>
                   </div>
-
-                  {/* Position Coordinates Display */}
-                  <div className="text-[11px] text-gray-400 ml-2">
-                    X: <span className="font-mono text-gray-700">{selectedElem.x}px</span> | Y: <span className="font-mono text-gray-700">{selectedElem.y}px</span> | W: <span className="font-mono text-gray-700">{selectedElem.width}px</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500 flex items-center gap-1.5">
-                  <Move className="w-3.5 h-3.5 text-purple-600 animate-bounce" />
-                  <span>Click and drag any box on the canvas below to reposition it freely</span>
                 </div>
               )}
 
               {/* Zoom Controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setZoomLevel(prev => Math.max(0.6, prev - 0.1))}
-                  className="p-1 hover:bg-gray-100 rounded text-gray-600"
+                  onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.1))}
+                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600"
                   title="Zoom Out"
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
-                <span className="text-xs font-mono text-gray-600 font-semibold">{Math.round(zoomLevel * 100)}%</span>
+                <span className="text-xs font-mono text-gray-700 font-bold px-1">{Math.round(zoomLevel * 100)}%</span>
                 <button
                   type="button"
                   onClick={() => setZoomLevel(prev => Math.min(1.4, prev + 0.1))}
-                  className="p-1 hover:bg-gray-100 rounded text-gray-600"
+                  className="p-1.5 hover:bg-gray-100 rounded text-gray-600"
                   title="Zoom In"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setZoomLevel(1)}
-                  className="text-[11px] text-gray-500 hover:text-black underline ml-1"
+                  onClick={() => setZoomLevel(0.85)}
+                  className="text-[11px] font-bold text-gray-500 hover:text-black underline ml-1"
                 >
-                  Reset Zoom
+                  Fit View
                 </button>
               </div>
 
             </div>
 
-            {/* Interactive Canvas Board */}
+            {/* Interactive Drag & Drop Canvas Board */}
             <div 
               className="flex-1 overflow-auto p-8 flex justify-center items-start bg-gray-200/70 select-none cursor-default"
               onPointerMove={handlePointerMove}
@@ -820,8 +932,8 @@ export default function Settings() {
                   design.fontFamily === 'mono' ? 'font-mono' : 'font-sans'
                 }`}
               >
-                {/* Visual Canvas Grid Background Indicator */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-40"></div>
+                {/* Visual Canvas Grid Background */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#f1f5f9_1px,transparent_1px),linear-gradient(to_bottom,#f1f5f9_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none opacity-50"></div>
 
                 {/* Canva Draggable Elements */}
                 {design.elements.filter(el => el.visible).map((el) => {
@@ -848,22 +960,22 @@ export default function Settings() {
                       }}
                       className={`group transition-shadow ${
                         isSelected 
-                          ? 'ring-2 ring-purple-600 ring-offset-2 shadow-lg z-30' 
+                          ? 'ring-2 ring-purple-600 ring-offset-2 shadow-xl z-30' 
                           : 'hover:ring-1 hover:ring-purple-400 hover:shadow-md'
                       }`}
                     >
-                      {/* Canva Selection Badge & Drag Handle */}
+                      {/* Canva Selection Badge & Resize Handle */}
                       {isSelected && (
                         <>
-                          <div className="absolute -top-6 left-0 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1 pointer-events-none">
+                          <div className="absolute -top-7 left-0 bg-purple-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 pointer-events-none tracking-wide">
                             <Move className="w-2.5 h-2.5" />
-                            {el.name}
+                            {el.name} ({el.x}px, {el.y}px)
                           </div>
                           
-                          {/* Right Resize Handle */}
+                          {/* Right Resize Drag Handle */}
                           <div 
                             onPointerDown={(e) => handlePointerDown(e, el.id, true)}
-                            className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-6 bg-purple-600 rounded-sm cursor-ew-resize hover:scale-125 transition-transform z-40"
+                            className="absolute -right-2 top-1/2 -translate-y-1/2 w-3.5 h-7 bg-purple-600 border border-white rounded cursor-ew-resize hover:scale-125 transition-transform z-40 shadow-sm"
                             title="Drag to resize width"
                           />
                         </>
@@ -876,18 +988,18 @@ export default function Settings() {
                             <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded" />
                           ) : (
                             <div 
-                              className="h-12 w-12 rounded-lg flex items-center justify-center text-white shadow-sm font-bold text-base shrink-0"
+                              className="h-12 w-12 rounded-xl flex items-center justify-center text-white shadow-sm font-black text-base shrink-0"
                               style={{ backgroundColor: design.primaryColor }}
                             >
                               {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
                             </div>
                           )}
                           <div>
-                            <h2 className="text-lg font-bold leading-tight" style={{ color: design.primaryColor }}>
+                            <h2 className="text-lg font-black leading-tight" style={{ color: design.primaryColor }}>
                               {companyName || 'My Company Name'}
                             </h2>
                             <p className="text-xs text-gray-500 leading-tight mt-0.5">{address || '123 Business Way, Suite 100'}</p>
-                            {gstNo && <p className="text-[11px] font-semibold text-gray-600 mt-0.5">GST: {gstNo}</p>}
+                            {gstNo && <p className="text-[11px] font-bold text-gray-600 mt-0.5">GST: {gstNo}</p>}
                           </div>
                         </div>
                       )}
@@ -897,7 +1009,7 @@ export default function Settings() {
                           <h3 className="text-2xl font-black tracking-wider uppercase leading-none" style={{ color: design.primaryColor }}>
                             INVOICE
                           </h3>
-                          <p className="text-xs font-semibold text-gray-900">Invoice No: INV-591499</p>
+                          <p className="text-xs font-bold text-gray-900">Invoice No: INV-591499</p>
                           <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
                           <div className="mt-1">
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
@@ -910,8 +1022,8 @@ export default function Settings() {
 
                       {el.type === 'billed_to' && (
                         <div>
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Billed To</p>
-                          <p className="font-bold text-base text-gray-900">m.kavinkumar</p>
+                          <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-1">Billed To</p>
+                          <p className="font-black text-base text-gray-900">m.kavinkumar</p>
                           <p className="text-xs text-gray-500 mt-0.5">1/239 kk palli, Phone: +91 9361654668</p>
                         </div>
                       )}
@@ -920,10 +1032,10 @@ export default function Settings() {
                         <table className="w-full text-left border-collapse text-xs">
                           <thead>
                             <tr className="border-b bg-gray-50/80">
-                              <th className="py-2 px-3 font-bold text-gray-700">Description</th>
-                              <th className="py-2 px-3 font-bold text-gray-700 text-center">Qty</th>
-                              <th className="py-2 px-3 font-bold text-gray-700 text-right">Rate</th>
-                              <th className="py-2 px-3 font-bold text-gray-700 text-right">Amount</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700">Description</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700 text-center">Qty</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700 text-right">Rate</th>
+                              <th className="py-2.5 px-3 font-bold text-gray-700 text-right">Amount</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
@@ -947,14 +1059,14 @@ export default function Settings() {
                         <div className="space-y-1.5 text-xs">
                           <div className="flex justify-between text-gray-600">
                             <span>Subtotal:</span>
-                            <span className="font-medium">₹950.00</span>
+                            <span className="font-semibold">₹950.00</span>
                           </div>
                           <div className="flex justify-between text-gray-600">
                             <span>Tax (5%):</span>
-                            <span className="font-medium">₹47.50</span>
+                            <span className="font-semibold">₹47.50</span>
                           </div>
                           <div 
-                            className="flex justify-between font-bold text-base pt-2 border-t mt-1"
+                            className="flex justify-between font-black text-base pt-2 border-t mt-1"
                             style={{ borderColor: design.primaryColor, color: el.textColor || design.primaryColor }}
                           >
                             <span>Total Amount:</span>
@@ -965,19 +1077,19 @@ export default function Settings() {
 
                       {el.type === 'bank_details' && (
                         <div>
-                          <p className="font-bold text-xs uppercase tracking-wider text-gray-700 mb-1">Bank & Payment Details</p>
+                          <p className="font-black text-xs uppercase tracking-wider text-gray-700 mb-1.5">Bank & Payment Details</p>
                           <div className="grid grid-cols-2 gap-1 text-[11px] text-gray-600">
-                            <div>Bank: <span className="font-semibold text-gray-800">{bankName || 'State Bank of India'}</span></div>
-                            <div>A/C: <span className="font-semibold text-gray-800">{accountNo || 'XXXX123456'}</span></div>
-                            <div>IFSC: <span className="font-semibold text-gray-800">{ifsc || 'SBIN0001234'}</span></div>
-                            <div>UPI: <span className="font-semibold text-gray-800">{upiId || 'company@upi'}</span></div>
+                            <div>Bank: <span className="font-bold text-gray-800">{bankName || 'State Bank of India'}</span></div>
+                            <div>A/C: <span className="font-bold text-gray-800">{accountNo || 'XXXX123456'}</span></div>
+                            <div>IFSC: <span className="font-bold text-gray-800">{ifsc || 'SBIN0001234'}</span></div>
+                            <div>UPI: <span className="font-bold text-gray-800">{upiId || 'company@upi'}</span></div>
                           </div>
                         </div>
                       )}
 
                       {el.type === 'notes_terms' && (
                         <div>
-                          <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Notes & Terms</p>
+                          <p className="text-[11px] font-black text-gray-400 uppercase tracking-wider mb-0.5">Notes & Terms</p>
                           <p className="text-xs text-gray-600 leading-relaxed">
                             Payment due within 15 days of invoice date. Thank you for your business!
                           </p>
@@ -987,7 +1099,7 @@ export default function Settings() {
                       {el.type === 'signature_block' && (
                         <div className="text-center">
                           <div className="w-32 border-b border-gray-400 mx-auto mb-1.5"></div>
-                          <p className="text-xs font-semibold text-gray-700">Authorized Signature</p>
+                          <p className="text-xs font-bold text-gray-700">Authorized Signature</p>
                           <p className="text-[10px] text-gray-400">{companyName || 'For Organization'}</p>
                         </div>
                       )}
