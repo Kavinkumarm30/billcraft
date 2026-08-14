@@ -145,7 +145,6 @@ const PORT = 3000;
       
       const base64Image = req.file.buffer.toString("base64");
       
-      let response;
       const promptParts = [
         {
           inlineData: {
