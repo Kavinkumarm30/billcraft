@@ -6,12 +6,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './schema.ts';
 
-// Function to create a new connection pool with reliable Supabase defaults
+// Function to create a new PostgreSQL connection pool securely from environment variables
 export const createPool = () => {
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
   if (connectionString) {
-    console.log("Connecting PostgreSQL pool using DATABASE_URL");
     return new Pool({
       connectionString,
       ssl: { rejectUnauthorized: false },
@@ -19,14 +18,16 @@ export const createPool = () => {
     });
   }
 
-  const sqlHost = process.env.SQL_HOST || 'db.ikdacyqhpwwxxxjkuicd.supabase.co';
-  const sqlUser = process.env.SQL_USER || 'postgres';
-  const sqlPassword = process.env.SQL_PASSWORD || '#Akshay0107';
+  const sqlHost = process.env.SQL_HOST;
+  const sqlUser = process.env.SQL_USER;
+  const sqlPassword = process.env.SQL_PASSWORD;
   const sqlDbName = process.env.SQL_DB_NAME || 'postgres';
   const sqlPort = process.env.SQL_PORT ? parseInt(process.env.SQL_PORT) : 5432;
-  const isSsl = process.env.SQL_SSL === 'true' || sqlHost.includes('supabase');
+  const isSsl = process.env.SQL_SSL === 'true' || (sqlHost ? sqlHost.includes('supabase') : false);
 
-  console.log(`Connecting PostgreSQL pool to host: ${sqlHost}:${sqlPort}`);
+  if (!sqlHost || !sqlPassword) {
+    console.warn("⚠️ Warning: PostgreSQL environment variables (SQL_HOST, SQL_PASSWORD) are not set. Please configure them in your environment settings.");
+  }
 
   return new Pool({
     host: sqlHost,
