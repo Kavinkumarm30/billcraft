@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 
 export default function Dashboard() {
-  const { getToken } = useAuth();
+  const { getToken, dbUser } = useAuth();
   const { data: dashboardStats, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
@@ -38,6 +38,8 @@ export default function Dashboard() {
 
   if (isLoading || isUserLoading) return <LoadingScreen message="Loading dashboard..." />;
 
+  const activeUser = userProfile?.email ? userProfile : dbUser;
+
   return (
     <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto">
       
@@ -49,7 +51,7 @@ export default function Dashboard() {
             AI-Powered Invoicing
           </div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-            Welcome back, {userProfile?.email?.split('@')[0] || 'User'} 👋
+            Welcome back, {activeUser?.email?.split('@')[0] || 'User'} 👋
           </h1>
           <p className="text-xs sm:text-sm text-gray-300 mt-0.5">
             Extract bills instantly with AI OCR or generate invoices in seconds
@@ -64,6 +66,35 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Prominent Upgrade Banner on Main Dashboard */}
+      {activeUser?.role !== 'SUPER_ADMIN' && activeUser?.subscriptionStatus !== 'ACTIVE' && (
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 sm:p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-amber-400/30">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2.5 bg-white/20 rounded-xl shrink-0 backdrop-blur-xs">
+              <Sparkles className="w-5 h-5 text-amber-200 fill-current" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-black text-white">
+                  {activeUser?.subscriptionStatus === 'TRIAL' ? 'Free Trial Active' : 'Upgrade to BillCraft Pro'}
+                </h2>
+                <span className="bg-white/25 text-white text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                  {activeUser?.trialInvoicesRemaining ?? 3} Free Bills Left
+                </span>
+              </div>
+              <p className="text-xs text-amber-100 mt-0.5">
+                Unlock unlimited AI OCR bill extractions, multi-device sync, and custom branding!
+              </p>
+            </div>
+          </div>
+          <Link to="/payment" className="w-full sm:w-auto shrink-0">
+            <Button className="w-full sm:w-auto bg-white hover:bg-amber-50 text-orange-950 font-black text-xs h-9 px-4 rounded-xl shadow-xs">
+              Upgrade Now <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* 4 Core Metric Cards (2x2 on Mobile, 4 in row on Desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">

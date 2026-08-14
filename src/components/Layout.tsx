@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { Button } from './ui/button';
+import { Sparkles, ArrowRight } from 'lucide-react';
 
 export default function Layout() {
   const { user, dbUser, logout } = useAuth();
@@ -46,12 +47,23 @@ export default function Layout() {
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       
       {/* Mobile Top Header */}
-      <div className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-2xs">
+      <div className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-2xs">
         <Link to="/dashboard" className="flex items-center gap-2">
           <Logo className="h-7" />
         </Link>
 
         <div className="flex items-center gap-2">
+          {/* Mobile Direct Upgrade Button when not Pro */}
+          {dbUser?.role !== 'SUPER_ADMIN' && dbUser?.subscriptionStatus !== 'ACTIVE' && (
+            <Link
+              to="/payment"
+              className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs px-3 py-1.5 rounded-xl shadow-xs active:scale-95 transition-transform"
+            >
+              <Sparkles className="w-3 h-3 fill-current text-amber-200" />
+              <span>Upgrade</span>
+            </Link>
+          )}
+
           {dbUser?.subscriptionStatus === 'ACTIVE' && (
             <span className="text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-800 px-2 py-0.5 rounded-full border border-green-200">
               PRO
@@ -66,7 +78,7 @@ export default function Layout() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 rounded-xl hover:bg-gray-100"
+            className="h-9 w-9 rounded-xl hover:bg-gray-100 text-gray-700"
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label="Toggle Menu"
           >
@@ -74,6 +86,24 @@ export default function Layout() {
           </Button>
         </div>
       </div>
+
+      {/* Mobile Trial Bar directly under header */}
+      {dbUser?.role !== 'SUPER_ADMIN' && dbUser?.subscriptionStatus === 'TRIAL' && (
+        <div className="md:hidden bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white px-3.5 py-1.5 flex items-center justify-between text-xs font-semibold shadow-xs">
+          <div className="flex items-center gap-1.5 truncate mr-2">
+            <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-200 fill-current" />
+            <span className="truncate text-[11px] font-bold">
+              {dbUser.trialInvoicesRemaining} of 3 free bills left
+            </span>
+          </div>
+          <Link
+            to="/payment"
+            className="shrink-0 bg-white text-orange-950 px-2.5 py-0.5 rounded-lg font-black text-[10px] hover:bg-orange-50 shadow-xs flex items-center gap-0.5 uppercase tracking-wide"
+          >
+            Upgrade Now →
+          </Link>
+        </div>
+      )}
 
       {/* Backdrop Overlay for Mobile Sidebar */}
       {sidebarOpen && (
