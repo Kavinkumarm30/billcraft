@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, UserX, UserCheck, Loader2, Check, X } from 'lucide-react';
+import { Shield, UserX, UserCheck, Loader2, Check, X, LayoutTemplate, ExternalLink, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { defaultCanvaDesign } from './Settings';
 
 export default function Admin() {
   const { getToken, user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'users' | 'payments'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'custom-layouts'>('users');
+
+  // Custom layout builder modal state for Admin
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [customLayoutDesign, setCustomLayoutDesign] = useState<any>(defaultCanvaDesign);
+  const [isDesignModalOpen, setIsDesignModalOpen] = useState(false);
 
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -30,6 +39,18 @@ export default function Admin() {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch payments');
+      return res.json();
+    }
+  });
+
+  const { data: customLayoutRequests, isLoading: customRequestsLoading } = useQuery({
+    queryKey: ['admin-custom-layouts'],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch('/api/admin/custom-layouts/pending', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Failed to fetch custom layout requests');
       return res.json();
     }
   });
@@ -65,7 +86,7 @@ export default function Admin() {
       if (!res.ok) throw new Error('Failed to approve payment');
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('Payment approved and subscription activated.');
@@ -86,10 +107,58 @@ export default function Admin() {
       if (!res.ok) throw new Error('Failed to reject payment');
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('Payment rejected.');
+    }
+  });
+
+  const approveLayoutMutation = useMutation({
+    mutationFn: async ({ requestId, invoiceLayout }: { requestId: number, invoiceLayout?: any }) => {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/custom-layouts/${requestId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ invoiceLayout })
+      });
+      if (!res.ok) throw new Error('Failed to approve custom layout');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-custom-layouts'] });
+      setIsDesignModalOpen(false);
+      setSelectedRequest(null);
+      toast.success('Custom layout created & access granted to the user!');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to approve custom layout');
+    }
+  });
+
+  const rejectLayoutMutation = useMutation({
+    mutationFn: async ({ requestId, note }: { requestId: number, note: string }) => {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/custom-layouts/${requestId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ note })
+      });
+      if (!res.ok) throw new Error('Failed to reject custom layout');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-custom-layouts'] });
+      toast.success('Custom layout request rejected.');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to reject custom layout');
     }
   });
 
@@ -98,31 +167,44 @@ export default function Admin() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <Shield className="h-6 w-6 text-black" /> Admin Dashboard
+            <Shield className="h-6 w-6 text-black" /> Admin Control Dashboard
           </h1>
-          <p className="text-gray-500 mt-1">Manage users and pending payments</p>
+          <p className="text-gray-500 mt-1">Manage users, payment approvals, and custom layout design requests</p>
         </div>
-        <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
+        <div className="flex space-x-2 bg-gray-100 p-1 rounded-xl">
           <button
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'users' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${activeTab === 'users' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             onClick={() => setActiveTab('users')}
           >
             Users
           </button>
           <button
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'payments' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === 'payments' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
             onClick={() => setActiveTab('payments')}
           >
             Payments
             {payments?.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center bg-red-100 text-red-600 text-xs rounded-full h-5 w-5">
+              <span className="inline-flex items-center justify-center bg-red-100 text-red-600 text-xs rounded-full h-5 w-5 font-bold">
                 {payments.length}
+              </span>
+            )}
+          </button>
+          <button
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 ${activeTab === 'custom-layouts' ? 'bg-white text-purple-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setActiveTab('custom-layouts')}
+          >
+            <LayoutTemplate className="w-3.5 h-3.5 text-purple-600" />
+            Custom Layout Requests
+            {customLayoutRequests?.length > 0 && (
+              <span className="inline-flex items-center justify-center bg-purple-100 text-purple-700 text-xs rounded-full h-5 w-5 font-bold">
+                {customLayoutRequests.length}
               </span>
             )}
           </button>
         </div>
       </div>
 
+      {/* 1. USERS TAB */}
       {activeTab === 'users' && (
         <div className="bg-white shadow-sm ring-1 ring-gray-100 rounded-lg overflow-hidden">
           {usersLoading ? (
@@ -143,7 +225,7 @@ export default function Admin() {
                     <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="font-medium text-gray-900">{u.email}</div>
-                        <div className="text-gray-500 text-xs">{u.uid}</div>
+                        <div className="text-gray-500 text-xs">{u.name || u.role}</div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-800 border border-blue-100">
@@ -204,6 +286,7 @@ export default function Admin() {
         </div>
       )}
 
+      {/* 2. PAYMENTS TAB */}
       {activeTab === 'payments' && (
         <div className="space-y-4">
           {paymentsLoading ? (
@@ -255,6 +338,209 @@ export default function Admin() {
           )}
         </div>
       )}
+
+      {/* 3. CUSTOM LAYOUT REQUESTS TAB (ADMIN BUILDS & GRANTS ACCESS) */}
+      {activeTab === 'custom-layouts' && (
+        <div className="space-y-4">
+          {customRequestsLoading ? (
+            <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
+          ) : customLayoutRequests?.length === 0 ? (
+            <div className="bg-white p-12 text-center rounded-2xl shadow-sm border border-gray-100 space-y-2">
+              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
+              <h3 className="text-base font-bold text-gray-900">No Pending Custom Layout Requests</h3>
+              <p className="text-xs text-gray-500">When users upload custom bill designs in Settings, they will appear here for you to design and grant access.</p>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {customLayoutRequests?.map((req: any) => (
+                <div key={req.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col lg:flex-row gap-6 items-start">
+                  
+                  {/* Uploaded Design Thumbnail */}
+                  <div className="w-full lg:w-1/4 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 group relative">
+                    <img 
+                      src={req.fileUrl} 
+                      alt="Custom Design" 
+                      className="w-full h-48 object-contain cursor-pointer transition-transform group-hover:scale-105" 
+                      onClick={() => setPreviewImage(req.fileUrl)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage(req.fileUrl)}
+                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 transition-opacity"
+                    >
+                      <ExternalLink className="w-4 h-4" /> View Full Image
+                    </button>
+                  </div>
+
+                  {/* Request Information */}
+                  <div className="w-full lg:w-3/4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                            PENDING REVIEW
+                          </span>
+                          <h3 className="font-bold text-base text-gray-900">
+                            Organization: {req.organization?.name || 'User Organization'}
+                          </h3>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Requested by: <span className="font-semibold text-gray-700">{req.user?.name || req.user?.email}</span> ({req.user?.email})
+                        </p>
+                      </div>
+                      <span className="text-xs text-gray-400 font-mono">
+                        Submitted: {new Date(req.submittedAt).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                      <Label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">User's Notes & Instructions:</Label>
+                      <p className="text-xs text-gray-800 mt-1 italic">
+                        "{req.note || 'No specific instructions provided.'}"
+                      </p>
+                    </div>
+
+                    {/* Admin Actions */}
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                      <Button
+                        onClick={() => {
+                          setSelectedRequest(req);
+                          setCustomLayoutDesign(defaultCanvaDesign);
+                          setIsDesignModalOpen(true);
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                        Design & Grant Custom Layout
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => approveLayoutMutation.mutate({ requestId: req.id })}
+                        disabled={approveLayoutMutation.isPending}
+                        className="border-green-300 text-green-700 hover:bg-green-50 text-xs font-bold"
+                      >
+                        <Check className="w-3.5 h-3.5 mr-1 text-green-600" />
+                        Quick Grant Access
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const note = window.prompt("Reason for rejecting custom layout request:");
+                          if (note !== null) {
+                            rejectLayoutMutation.mutate({ requestId: req.id, note });
+                          }
+                        }}
+                        disabled={rejectLayoutMutation.isPending}
+                        className="border-red-200 text-red-600 hover:bg-red-50 text-xs"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" />
+                        Reject Request
+                      </Button>
+                    </div>
+
+                  </div>
+
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Full Image Preview Modal */}
+      <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl p-2 bg-black/90">
+          <div className="flex justify-center p-4">
+            {previewImage && (
+              <img src={previewImage} alt="Full Preview" className="max-h-[80vh] object-contain rounded" />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Design & Grant Access Builder Modal */}
+      <Dialog open={isDesignModalOpen} onOpenChange={setIsDesignModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600" />
+              Craft Custom Layout for {selectedRequest?.organization?.name || selectedRequest?.user?.email}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-gray-500">
+              Select or customize the invoice design format to grant specifically to this organization.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Reference user upload */}
+              <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
+                <Label className="text-xs font-bold text-gray-700">User's Uploaded Reference:</Label>
+                <div className="h-44 bg-white rounded-lg border flex items-center justify-center overflow-hidden">
+                  {selectedRequest?.fileUrl && (
+                    <img src={selectedRequest.fileUrl} alt="Reference" className="max-h-full object-contain" />
+                  )}
+                </div>
+                <p className="text-[11px] text-gray-500 italic">"{selectedRequest?.note}"</p>
+              </div>
+
+              {/* Template Style Choice */}
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-700">Assign Starting Layout Template:</Label>
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                  {[
+                    { name: 'Standard Modern', color: '#18181b', font: 'sans', desc: 'Sleek standard layout with left logo' },
+                    { name: 'Orange Classic (Custom Monisha Layout)', color: '#ea580c', font: 'serif', desc: 'Warm boxed cards with custom total cards' },
+                    { name: 'Executive Dark Slate', color: '#0f172a', font: 'sans', desc: 'Dark solid header with corporate styling' },
+                    { name: 'Emerald Fresh', color: '#059669', font: 'sans', desc: 'Centered header with green border accents' },
+                  ].map((tpl, i) => (
+                    <div 
+                      key={i}
+                      onClick={() => {
+                        setCustomLayoutDesign((prev: any) => ({
+                          ...prev,
+                          primaryColor: tpl.color,
+                          fontFamily: tpl.font
+                        }));
+                        toast.success(`Selected "${tpl.name}" theme for user`);
+                      }}
+                      className="p-2.5 rounded-xl border border-gray-200 hover:border-purple-600 cursor-pointer bg-white transition-all text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-900">{tpl.name}</span>
+                        <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: tpl.color }} />
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{tpl.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDesignModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!selectedRequest) return;
+                approveLayoutMutation.mutate({
+                  requestId: selectedRequest.id,
+                  invoiceLayout: customLayoutDesign
+                });
+              }}
+              disabled={approveLayoutMutation.isPending}
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+            >
+              {approveLayoutMutation.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+              Save Layout & Grant Access to User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

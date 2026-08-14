@@ -972,13 +972,20 @@ const PORT = 3000;
         .set({ status: 'APPROVED', verifiedAt: new Date() })
         .where(eq(customLayoutRequests.id, requestId));
 
+      const updatePayload: any = { hasCustomLayoutAccess: true };
+      if (req.body.invoiceLayout) {
+        updatePayload.invoiceLayout = typeof req.body.invoiceLayout === 'string' 
+          ? req.body.invoiceLayout 
+          : JSON.stringify(req.body.invoiceLayout);
+      }
+
       await db.update(companySettings)
-        .set({ hasCustomLayoutAccess: true })
+        .set(updatePayload)
         .where(eq(companySettings.orgId, request.orgId));
 
-      res.json({ success: true });
+      res.json({ success: true, orgId: request.orgId });
     } catch (error: any) {
-      
+      console.error("Approve custom layout error:", error);
       res.status(500).json({ error: error.message });
     }
   });

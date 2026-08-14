@@ -713,6 +713,24 @@ export default function Settings() {
                     )}
                   </div>
 
+                  {/* If user has been granted custom layout access by Admin */}
+                  {settings?.hasCustomLayoutAccess && (
+                    <div className="p-3 rounded-xl border border-green-300 bg-green-50/80 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-green-950 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-green-600" />
+                          Custom Layout Active
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-200 text-green-800">
+                          ACCESS GRANTED
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-green-800">
+                        Admin has crafted and unlocked your organization's custom bill format.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-black uppercase tracking-wider text-gray-400">1-Click Layout Presets</p>
