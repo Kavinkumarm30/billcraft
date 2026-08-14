@@ -318,6 +318,30 @@ const PORT = 3000;
     }
   });
 
+  const parseSafeDate = (d: any): Date => {
+    if (!d) return new Date();
+    if (d instanceof Date && !isNaN(d.getTime())) return d;
+    if (typeof d === 'string') {
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) return dt;
+      if (d.includes('/')) {
+        const parts = d.split('/');
+        if (parts.length === 3) {
+          const d1 = new Date(`${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`);
+          if (!isNaN(d1.getTime())) return d1;
+        }
+      }
+    }
+    return new Date();
+  };
+
+  const safeNumericStr = (val: any): string => {
+    if (val === undefined || val === null || val === '') return '0';
+    const clean = String(val).replace(/[^0-9.-]+/g, '');
+    const num = parseFloat(clean);
+    return isNaN(num) ? '0' : String(num);
+  };
+
   app.post("/api/invoices", requireAuth, async (req: AuthRequest, res) => {
     try {
       const u = req.dbUser;
@@ -340,16 +364,16 @@ const PORT = 3000;
       let customerId = null;
       if (customerName) {
         const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
-        const customer = existingCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
+        const customer = existingCustomers.find(c => c.name.toLowerCase() === String(customerName).trim().toLowerCase());
         
         if (customer) {
           customerId = customer.id;
         } else {
           const newCustomer = await db.insert(customers).values({
             orgId: u.orgId,
-            name: customerName,
-            phone: phone || null,
-            address: address || null,
+            name: String(customerName).trim(),
+            phone: phone ? String(phone).trim() : null,
+            address: address ? String(address).trim() : null,
           }).returning();
           customerId = newCustomer[0].id;
         }
@@ -360,12 +384,12 @@ const PORT = 3000;
         orgId: u.orgId,
         customerId: customerId,
         createdBy: u.id,
-        invoiceNumber: invoiceNumber || `INV-${Date.now()}`,
-        date: date ? new Date(date) : new Date(),
-        subtotal: String(subtotal || 0),
-        discount: String(discount || 0),
-        taxAmount: String(taxAmount || 0),
-        grandTotal: String(grandTotal || 0),
+        invoiceNumber: invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+        date: parseSafeDate(date),
+        subtotal: safeNumericStr(subtotal),
+        discount: safeNumericStr(discount),
+        taxAmount: safeNumericStr(taxAmount),
+        grandTotal: safeNumericStr(grandTotal),
         notes: notes || null,
         status: status || 'PENDING',
         paymentMethod: paymentMethod || null,
@@ -373,13 +397,13 @@ const PORT = 3000;
       }).returning();
 
       // 3. Create items
-      if (items && items.length > 0) {
+      if (items && Array.isArray(items) && items.length > 0) {
         const itemValues = items.map(item => ({
           invoiceId: newInvoice[0].id,
-          description: item.description || '',
-          quantity: String(item.quantity || 1),
-          rate: String(item.rate || 0),
-          amount: String(item.amount || 0)
+          description: item.description || 'Item',
+          quantity: safeNumericStr(item.quantity || 1),
+          rate: safeNumericStr(item.rate || 0),
+          amount: safeNumericStr(item.amount || 0)
         }));
         await db.insert(invoiceItems).values(itemValues);
       }
@@ -387,15 +411,14 @@ const PORT = 3000;
       // Decrement trial invoices if applicable
       if (u.role !== 'SUPER_ADMIN' && u.subscriptionStatus === 'TRIAL') {
         await db.update(users)
-          .set({ trialInvoicesRemaining: u.trialInvoicesRemaining - 1 })
+          .set({ trialInvoicesRemaining: Math.max(0, u.trialInvoicesRemaining - 1) })
           .where(eq(users.id, u.id));
       }
 
       res.json(newInvoice[0]);
-    } catch (error) {
-      console.error(error);
-      
-      res.status(500).json({ error: error.message });
+    } catch (error: any) {
+      console.error("Create invoice error:", error);
+      res.status(500).json({ error: error.message || "Failed to create invoice" });
     }
   });
 
@@ -411,7 +434,7 @@ const PORT = 3000;
 
       const targetInvoices = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
       if (targetInvoices.length === 0) {
-        return res.status(404).json({ error: "Invoice not found" });
+        return res.status(404).json({ error: "Invoice not found in database" });
       }
 
       const targetInvoice = targetInvoices[0];
@@ -425,14 +448,14 @@ const PORT = 3000;
       let customerId = targetInvoice.customerId;
       if (customerName) {
         const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
-        const customer = existingCustomers.find(c => c.name.toLowerCase() === customerName.toLowerCase());
+        const customer = existingCustomers.find(c => c.name.toLowerCase() === String(customerName).trim().toLowerCase());
         if (customer) {
           customerId = customer.id;
           if (phone !== undefined || address !== undefined) {
             await db.update(customers)
               .set({
-                phone: phone !== undefined ? phone : customer.phone,
-                address: address !== undefined ? address : customer.address,
+                phone: phone !== undefined ? String(phone).trim() : customer.phone,
+                address: address !== undefined ? String(address).trim() : customer.address,
                 updatedAt: new Date()
               })
               .where(eq(customers.id, customer.id));
@@ -440,9 +463,9 @@ const PORT = 3000;
         } else {
           const newCustomer = await db.insert(customers).values({
             orgId: u.orgId,
-            name: customerName,
-            phone: phone || null,
-            address: address || null,
+            name: String(customerName).trim(),
+            phone: phone ? String(phone).trim() : null,
+            address: address ? String(address).trim() : null,
           }).returning();
           customerId = newCustomer[0].id;
         }
@@ -453,11 +476,11 @@ const PORT = 3000;
         .set({
           customerId,
           invoiceNumber: invoiceNumber || targetInvoice.invoiceNumber,
-          date: date ? new Date(date) : targetInvoice.date,
-          subtotal: String(subtotal || 0),
-          discount: String(discount || 0),
-          taxAmount: String(taxAmount || 0),
-          grandTotal: String(grandTotal || 0),
+          date: parseSafeDate(date),
+          subtotal: safeNumericStr(subtotal),
+          discount: safeNumericStr(discount),
+          taxAmount: safeNumericStr(taxAmount),
+          grandTotal: safeNumericStr(grandTotal),
           notes: notes !== undefined ? notes : targetInvoice.notes,
           status: status || targetInvoice.status || 'PENDING',
           paymentMethod: paymentMethod !== undefined ? paymentMethod : targetInvoice.paymentMethod,
@@ -473,10 +496,10 @@ const PORT = 3000;
         if (items.length > 0) {
           const itemValues = items.map(item => ({
             invoiceId: invoiceId,
-            description: item.description || '',
-            quantity: String(item.quantity || 1),
-            rate: String(item.rate || 0),
-            amount: String(item.amount || 0)
+            description: item.description || 'Item',
+            quantity: safeNumericStr(item.quantity || 1),
+            rate: safeNumericStr(item.rate || 0),
+            amount: safeNumericStr(item.amount || 0)
           }));
           await db.insert(invoiceItems).values(itemValues);
         }
@@ -485,7 +508,7 @@ const PORT = 3000;
       res.json(updatedInvoice[0]);
     } catch (error: any) {
       console.error("Update invoice error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: error.message || "Failed to update invoice" });
     }
   });
 

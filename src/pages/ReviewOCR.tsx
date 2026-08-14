@@ -26,6 +26,13 @@ export default function ReviewOCR() {
     if (location.state?.isEditing && location.state?.invoiceId) {
       setIsEditing(true);
       setEditingInvoiceId(location.state.invoiceId);
+      sessionStorage.setItem('editingInvoiceId', String(location.state.invoiceId));
+    } else {
+      const savedEditId = sessionStorage.getItem('editingInvoiceId');
+      if (savedEditId) {
+        setIsEditing(true);
+        setEditingInvoiceId(parseInt(savedEditId));
+      }
     }
 
     const savedData = sessionStorage.getItem('extractedBillData');
@@ -62,9 +69,12 @@ export default function ReviewOCR() {
            amount = qNum * rNum;
         }
         
-        return { ...item, quantity: qNum || 1, rate: rNum || 0, amount };
+        return { ...item, description: item.description || '', quantity: qNum || 1, rate: rNum || 0, amount };
       });
       if (!parsed.date) parsed.date = new Date().toISOString().split('T')[0];
+      if (typeof parsed.date === 'string' && parsed.date.includes('T')) {
+        parsed.date = parsed.date.split('T')[0];
+      }
       if (!parsed.invoiceNumber) parsed.invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
       if (!parsed.status) parsed.status = 'PAID';
       if (!parsed.paymentMethod) parsed.paymentMethod = 'Cash';
@@ -162,13 +172,6 @@ export default function ReviewOCR() {
       return;
     }
 
-    // Ensure all items are valid
-    const hasInvalidItems = data.items.some((item: any) => !item.description?.trim());
-    if (hasInvalidItems) {
-      toast.error('All items must have a description');
-      return;
-    }
-
     setIsSaving(true);
     try {
       // Recalculate totals
@@ -177,12 +180,17 @@ export default function ReviewOCR() {
       const discount = parseFloat(data.discount) || 0;
       const grandTotal = subtotal + tax - discount;
       
+      let cleanDate = data.date || new Date().toISOString().split('T')[0];
+      if (typeof cleanDate === 'string' && cleanDate.includes('T')) {
+        cleanDate = cleanDate.split('T')[0];
+      }
+
       const payload = {
         customerName: data.customerName.trim(),
         phone: data.phone || null,
         address: data.address || null,
         invoiceNumber: data.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
-        date: data.date || new Date().toISOString().split('T')[0],
+        date: cleanDate,
         subtotal,
         discount,
         taxAmount: tax,
@@ -192,7 +200,7 @@ export default function ReviewOCR() {
         paymentMethod: data.status === 'PAID' ? (data.paymentMethod || 'Cash') : null,
         paymentReference: data.status === 'PAID' ? (data.paymentReference || null) : null,
         items: data.items.map((i: any) => ({
-          description: i.description,
+          description: i.description || 'Item',
           quantity: Number(i.quantity) || 1,
           rate: Number(i.rate) || 0,
           amount: Number(i.amount) || 0,
@@ -200,8 +208,9 @@ export default function ReviewOCR() {
       };
 
       const token = await getToken();
-      const endpoint = (isEditing && editingInvoiceId) ? `/api/invoices/${editingInvoiceId}` : '/api/invoices';
-      const method = (isEditing && editingInvoiceId) ? 'PUT' : 'POST';
+      const targetEditId = isEditing ? (editingInvoiceId || sessionStorage.getItem('editingInvoiceId')) : null;
+      const endpoint = targetEditId ? `/api/invoices/${targetEditId}` : '/api/invoices';
+      const method = targetEditId ? 'PUT' : 'POST';
 
       const response = await fetch(endpoint, {
         method,
@@ -214,17 +223,18 @@ export default function ReviewOCR() {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to save bill to database');
+        throw new Error(err.error || `Failed to save invoice (${response.status})`);
       }
 
       const savedInvoice = await response.json();
-      toast.success(isEditing ? 'Invoice updated in History!' : 'Bill generated and saved to History!');
+      toast.success(targetEditId ? 'Invoice updated in History!' : 'Bill generated and saved to History!');
 
       sessionStorage.setItem('finalInvoiceData', JSON.stringify(payload));
       sessionStorage.removeItem('extractedBillData');
       sessionStorage.removeItem('billImagePreview');
+      sessionStorage.removeItem('editingInvoiceId');
 
-      navigate('/bills/preview', { state: { invoiceData: payload, isSaved: true, invoiceId: savedInvoice.id || editingInvoiceId } });
+      navigate('/bills/preview', { state: { invoiceData: payload, isSaved: true, invoiceId: savedInvoice.id || targetEditId } });
     } catch (error: any) {
       console.error("Save invoice error:", error);
       toast.error(error.message || 'Failed to save invoice');
