@@ -21,14 +21,22 @@ export const createPool = () => {
     });
   }
 
-  const sqlHost = process.env.SQL_HOST || 'aws-0-ap-northeast-2.pooler.supabase.com';
-  const sqlUser = process.env.SQL_USER || 'postgres.ikdacyqhpwwxxxjkuicd';
-  const sqlPassword = process.env.SQL_PASSWORD || '#Akshay0107';
+  // SECURITY: All credentials MUST come from environment variables — no hardcoded fallbacks
+  const sqlHost = process.env.SQL_HOST;
+  const sqlUser = process.env.SQL_USER;
+  const sqlPassword = process.env.SQL_PASSWORD;
   const sqlDbName = process.env.SQL_DB_NAME || 'postgres';
   const sqlPort = process.env.SQL_PORT ? parseInt(process.env.SQL_PORT) : 6543;
-  const isSsl = process.env.SQL_SSL === 'true' || true;
+  const isSsl = process.env.SQL_SSL !== 'false';
 
-  console.log(`Connecting PostgreSQL pool to host: ${sqlHost}:${sqlPort} (User: ${sqlUser})`);
+  if (!sqlHost || !sqlUser || !sqlPassword) {
+    throw new Error(
+      'Missing required database environment variables (SQL_HOST, SQL_USER, SQL_PASSWORD). ' +
+      'Set them in your .env file or Vercel Environment Variables.'
+    );
+  }
+
+  console.log(`Connecting PostgreSQL pool to host: ${sqlHost}:${sqlPort}`);
 
   return new Pool({
     host: sqlHost,

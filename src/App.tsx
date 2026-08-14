@@ -35,6 +35,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// SECURITY (MED-01): Only SUPER_ADMIN users can access the Admin page
+function AdminGuard() {
+  const { dbUser, loading } = useAuth();
+  
+  if (loading) {
+    return <LoadingScreen message="Verifying access..." />;
+  }
+  
+  if (!dbUser || dbUser.role !== 'SUPER_ADMIN') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <Admin />;
+}
+
 export default function App() {
   return (
     <Router>
@@ -51,7 +66,7 @@ export default function App() {
           <Route path="bills/preview" element={<InvoicePreview />} />
           <Route path="customers" element={<Customers />} />
           <Route path="settings" element={<Settings />} />
-          <Route path="admin" element={<Admin />} />
+          <Route path="admin" element={<AdminGuard />} />
         </Route>
 
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />

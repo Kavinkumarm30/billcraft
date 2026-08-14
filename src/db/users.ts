@@ -4,7 +4,9 @@ import { eq } from 'drizzle-orm';
 
 export async function getOrCreateUser(uid: string, email: string) {
   try {
-    const isSuperAdminEmail = (email === 'kavinkumar.m30@gmail.com' || email === 'kavin18072005@gmail.com');
+    // SECURITY: Super admin emails are read from environment variables, not hardcoded in source
+    const superAdminEmails = (process.env.SUPER_ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isSuperAdminEmail = superAdminEmails.includes(email.toLowerCase());
     
     // Check if user already exists
     const existingUsers = await db.select().from(users).where(eq(users.uid, uid));

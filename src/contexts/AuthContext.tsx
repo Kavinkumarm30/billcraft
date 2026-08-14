@@ -50,26 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               setDbUser(null);
               toast.error("Your access has been revoked by the administrator.");
             } else {
-              // Graceful fallback so user is allowed in while notifying about DB/Vercel settings
-              setDbUser({
-                email: firebaseUser.email,
-                role: 'ADMIN',
-                subscriptionStatus: 'ACTIVE',
-                trialInvoicesRemaining: 3
-              });
+              // SECURITY FIX: Do NOT grant elevated roles on backend failure.
+              // Set dbUser to null so SubscriptionGate shows an error page.
+              setDbUser(null);
               if (res.status === 500) {
-                toast.error(`Backend Database Error: ${errData.error || 'Check Vercel Environment Variables'}`);
+                toast.error(`Backend Error: ${errData.error || 'Server unavailable. Please try again later.'}`);
+              } else {
+                toast.error('Failed to load your profile. Please try again.');
               }
             }
           }
         } catch (error: any) {
           console.error("Failed to fetch user data:", error);
-          setDbUser({
-            email: firebaseUser.email,
-            role: 'ADMIN',
-            subscriptionStatus: 'ACTIVE',
-            trialInvoicesRemaining: 3
-          });
+          // SECURITY FIX: Do NOT grant elevated roles when backend is unreachable.
+          setDbUser(null);
+          toast.error('Cannot connect to server. Please check your connection and try again.');
         }
       } else {
         setDbUser(null);

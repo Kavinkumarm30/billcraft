@@ -6,6 +6,8 @@ try {
 
 import express from "express";
 import path from "path";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
 import { db } from "./src/db/index.ts";
 import { organizations, users, companySettings, customers, invoices, invoiceItems, payments, customLayoutRequests } from "./src/db/schema.ts";
@@ -16,20 +18,67 @@ import fs from "fs";
 
 // Initialize Gemini API for AI Extraction
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "dummy_key_if_missing" });
-const upload = multer({ storage: multer.memoryStorage() });
+
+// SECURITY: File upload with size limit and type validation (HIGH-05)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'application/pdf'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPEG, PNG, WebP, GIF, BMP) and PDFs are allowed'));
+    }
+  }
+});
 
 export const app = express();
 const PORT = 3000;
   
+// SECURITY: Security headers (HIGH-03)
+app.use(helmet({
+  contentSecurityPolicy: false, // Disabled for SPA compatibility; enable when ready
+  crossOriginEmbedderPolicy: false,
+}));
+
+// SECURITY: CORS restricted to allowed origins (HIGH-01)
+const ALLOWED_ORIGINS = [
+  'https://bill-craft-three.vercel.app',
+  process.env.APP_URL || '',
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : '',
+  process.env.NODE_ENV !== 'production' ? 'http://localhost:5173' : '',
+].filter(Boolean);
+
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
   res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
   next();
 });
+
+// SECURITY: Rate limiting (HIGH-02)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // 200 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' }
+});
+const extractLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5, // 5 OCR requests per minute
+  message: { error: 'OCR rate limit exceeded. Please wait before trying again.' }
+});
+app.use('/api/', apiLimiter);
+app.use('/api/extract', extractLimiter);
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -83,7 +132,24 @@ app.use(express.json({ limit: '10mb' }));
         return res.status(404).json({ error: "Organization not found" });
       }
 
-      const { companyName, ...settingData } = req.body;
+      // SECURITY: Whitelist allowed settings fields to prevent mass assignment (HIGH-04)
+      const { companyName, address, phone, email, website, gstNo, panNo, bankName, accountNo, ifsc, upiId, invoicePrefix, invoiceLayout, footer, terms, logoUrl } = req.body;
+      const safeSettingData: Record<string, any> = {};
+      if (address !== undefined) safeSettingData.address = address;
+      if (phone !== undefined) safeSettingData.phone = phone;
+      if (email !== undefined) safeSettingData.email = email;
+      if (website !== undefined) safeSettingData.website = website;
+      if (gstNo !== undefined) safeSettingData.gstNo = gstNo;
+      if (panNo !== undefined) safeSettingData.panNo = panNo;
+      if (bankName !== undefined) safeSettingData.bankName = bankName;
+      if (accountNo !== undefined) safeSettingData.accountNo = accountNo;
+      if (ifsc !== undefined) safeSettingData.ifsc = ifsc;
+      if (upiId !== undefined) safeSettingData.upiId = upiId;
+      if (invoicePrefix !== undefined) safeSettingData.invoicePrefix = invoicePrefix;
+      if (invoiceLayout !== undefined) safeSettingData.invoiceLayout = invoiceLayout;
+      if (footer !== undefined) safeSettingData.footer = footer;
+      if (terms !== undefined) safeSettingData.terms = terms;
+      if (logoUrl !== undefined) safeSettingData.logoUrl = logoUrl;
 
       if (companyName) {
         await db.update(organizations)
@@ -92,14 +158,14 @@ app.use(express.json({ limit: '10mb' }));
       }
 
       const updatedSettings = await db.update(companySettings)
-        .set(settingData)
+        .set(safeSettingData)
         .where(eq(companySettings.orgId, u.orgId))
         .returning();
 
       res.json(updatedSettings[0]);
     } catch (error: any) {
-      
-      res.status(500).json({ error: error.message });
+      console.error("Update settings error:", error);
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to update settings' : error.message });
     }
   });
 
@@ -331,6 +397,11 @@ app.use(express.json({ limit: '10mb' }));
         return res.status(400).json({ error: "Invalid user ID" });
       }
 
+      // SECURITY: Prevent self-privilege escalation (MED-05)
+      if (targetUserId === u.id) {
+        return res.status(403).json({ error: "Forbidden: You cannot modify your own permissions" });
+      }
+
       const targetUsers = await db.select().from(users).where(eq(users.id, targetUserId));
       if (targetUsers.length === 0) {
         return res.status(404).json({ error: "User not found" });
@@ -343,9 +414,15 @@ app.use(express.json({ limit: '10mb' }));
 
       const { role, canReadInvoices, canWriteInvoices, canCustomizeLayout, canManageCustomers, isActive } = req.body;
 
+      // SECURITY: Only SUPER_ADMIN can assign SUPER_ADMIN or ADMIN roles
+      const requestedRole = role !== undefined ? role : targetUser.role;
+      if ((requestedRole === 'SUPER_ADMIN' || requestedRole === 'ADMIN') && u.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Only Super Admin can assign admin roles" });
+      }
+
       const updatedUser = await db.update(users)
         .set({
-          role: role !== undefined ? role : targetUser.role,
+          role: requestedRole,
           canReadInvoices: canReadInvoices !== undefined ? Boolean(canReadInvoices) : targetUser.canReadInvoices,
           canWriteInvoices: canWriteInvoices !== undefined ? Boolean(canWriteInvoices) : targetUser.canWriteInvoices,
           canCustomizeLayout: canCustomizeLayout !== undefined ? Boolean(canCustomizeLayout) : targetUser.canCustomizeLayout,
@@ -359,7 +436,7 @@ app.use(express.json({ limit: '10mb' }));
       res.json(updatedUser[0]);
     } catch (error: any) {
       console.error("Update permissions error:", error);
-      res.status(500).json({ error: error.message || "Failed to update permissions" });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to update permissions' : error.message });
     }
   });
 
@@ -565,12 +642,13 @@ app.use(express.json({ limit: '10mb' }));
       const invoiceId = parseInt(req.params.id);
       const { customerName, phone, address, invoiceNumber, date, subtotal, discount, taxAmount, grandTotal, notes, items, status, paymentMethod, paymentReference } = req.body;
 
+      // SECURITY FIX (MED-02): Always filter by orgId to prevent IDOR cross-org access
       let targetInvoices: any[] = [];
       if (!isNaN(invoiceId)) {
-        targetInvoices = await db.select().from(invoices).where(eq(invoices.id, invoiceId));
+        targetInvoices = await db.select().from(invoices).where(and(eq(invoices.id, invoiceId), eq(invoices.orgId, u.orgId)));
       }
 
-      // If not found by numeric ID, try searching by invoiceNumber
+      // If not found by numeric ID, try searching by invoiceNumber (already org-scoped)
       if (targetInvoices.length === 0 && invoiceNumber) {
         targetInvoices = await db.select().from(invoices).where(and(eq(invoices.orgId, u.orgId), eq(invoices.invoiceNumber, invoiceNumber)));
       }
@@ -770,7 +848,24 @@ app.use(express.json({ limit: '10mb' }));
       const u = req.dbUser;
       if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
 
-      const { companyName, ...settingData } = req.body;
+      // SECURITY: Whitelist allowed settings fields to prevent mass assignment (HIGH-04)
+      const { companyName, address, phone, email, website, gstNo, panNo, bankName, accountNo, ifsc, upiId, invoicePrefix, invoiceLayout, footer, terms, logoUrl } = req.body;
+      const safeSettingData: Record<string, any> = {};
+      if (address !== undefined) safeSettingData.address = address;
+      if (phone !== undefined) safeSettingData.phone = phone;
+      if (email !== undefined) safeSettingData.email = email;
+      if (website !== undefined) safeSettingData.website = website;
+      if (gstNo !== undefined) safeSettingData.gstNo = gstNo;
+      if (panNo !== undefined) safeSettingData.panNo = panNo;
+      if (bankName !== undefined) safeSettingData.bankName = bankName;
+      if (accountNo !== undefined) safeSettingData.accountNo = accountNo;
+      if (ifsc !== undefined) safeSettingData.ifsc = ifsc;
+      if (upiId !== undefined) safeSettingData.upiId = upiId;
+      if (invoicePrefix !== undefined) safeSettingData.invoicePrefix = invoicePrefix;
+      if (invoiceLayout !== undefined) safeSettingData.invoiceLayout = invoiceLayout;
+      if (footer !== undefined) safeSettingData.footer = footer;
+      if (terms !== undefined) safeSettingData.terms = terms;
+      if (logoUrl !== undefined) safeSettingData.logoUrl = logoUrl;
 
       if (companyName) {
         await db.update(organizations)
@@ -784,12 +879,12 @@ app.use(express.json({ limit: '10mb' }));
       if (existingSettings.length === 0) {
         updatedSettings = await db.insert(companySettings).values({
           orgId: u.orgId,
-          ...settingData,
+          ...safeSettingData,
         }).returning();
       } else {
         updatedSettings = await db.update(companySettings)
           .set({
-            ...settingData,
+            ...safeSettingData,
             updatedAt: new Date()
           })
           .where(eq(companySettings.orgId, u.orgId))
@@ -802,7 +897,7 @@ app.use(express.json({ limit: '10mb' }));
       });
     } catch (error: any) {
       console.error("Update settings error:", error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to update settings' : error.message });
     }
   });
 
