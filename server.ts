@@ -194,9 +194,9 @@ const PORT = 3000;
           config: modelConfig
         });
       } catch (firstErr) {
-        console.warn("Primary model gemini-flash-latest failed, trying fallback gemini-2.5-flash-lite:", firstErr);
+        console.warn("Primary model gemini-flash-latest failed, trying fallback gemini-3.6-flash:", firstErr);
         response = await ai.models.generateContent({
-          model: "gemini-2.5-flash-lite",
+          model: "gemini-3.6-flash",
           contents: [{ role: "user", parts: promptParts }],
           config: modelConfig
         });
