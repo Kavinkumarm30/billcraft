@@ -1,0 +1,146 @@
+
+  // Onboarding endpoint
+  app.post("/api/onboarding", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      const { companyName, ...settingData } = req.body;
+      
+      if (companyName) {
+        await db.update(organizations)
+          .set({ name: companyName })
+          .where(eq(organizations.id, u.orgId));
+      }
+
+      await db.update(companySettings)
+        .set(settingData)
+        .where(eq(companySettings.orgId, u.orgId));
+        
+      await db.update(users)
+        .set({ onboardingCompleted: true })
+        .where(eq(users.id, u.id));
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Payment Submit endpoint
+  app.post("/api/payments/submit", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+      
+      const { screenshotUrl } = req.body;
+      if (!screenshotUrl) return res.status(400).json({ error: "Screenshot is required" });
+
+      const newPayment = await db.insert(payments)
+        .values({
+          userId: u.id,
+          orgId: u.orgId,
+          amount: '399',
+          screenshotUrl,
+          status: 'PENDING'
+        }).returning();
+
+      await db.update(users)
+        .set({ subscriptionStatus: 'PENDING_VERIFICATION' })
+        .where(eq(users.id, u.id));
+
+      res.json(newPayment[0]);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Pending Payments endpoint
+  app.get("/api/admin/payments/pending", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (req.dbUser.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Super Admin only" });
+      }
+      
+      const pendingPayments = await db.query.payments.findMany({
+        where: eq(payments.status, 'PENDING'),
+        with: {
+          user: true
+        },
+        orderBy: [desc(payments.submittedAt)]
+      });
+      
+      res.json(pendingPayments);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Approve Payment
+  app.post("/api/admin/payments/:id/approve", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (req.dbUser.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Super Admin only" });
+      }
+      
+      const paymentId = parseInt(req.params.id);
+      const targetPayments = await db.select().from(payments).where(eq(payments.id, paymentId));
+      if (targetPayments.length === 0) return res.status(404).json({ error: "Payment not found" });
+      const payment = targetPayments[0];
+
+      await db.update(payments)
+        .set({ status: 'APPROVED', verifiedAt: new Date(), verifiedBy: req.dbUser.id })
+        .where(eq(payments.id, paymentId));
+
+      const endsAt = new Date();
+      endsAt.setDate(endsAt.getDate() + 31);
+
+      const updatedUserResult = await db.update(users)
+        .set({ subscriptionStatus: 'ACTIVE', subscriptionStartAt: new Date(), subscriptionEndsAt: endsAt })
+        .where(eq(users.id, payment.userId))
+        .returning();
+
+      res.json({ payment: payment, user: updatedUserResult[0] });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Reject Payment
+  app.post("/api/admin/payments/:id/reject", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (req.dbUser.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Super Admin only" });
+      }
+      
+      const paymentId = parseInt(req.params.id);
+      const { note } = req.body;
+      
+      const targetPayments = await db.select().from(payments).where(eq(payments.id, paymentId));
+      if (targetPayments.length === 0) return res.status(404).json({ error: "Payment not found" });
+      const payment = targetPayments[0];
+
+      await db.update(payments)
+        .set({ status: 'REJECTED', verifiedAt: new Date(), verifiedBy: req.dbUser.id, note })
+        .where(eq(payments.id, paymentId));
+
+      // Decide what state to put the user back into.
+      const targetUserResult = await db.select().from(users).where(eq(users.id, payment.userId));
+      const targetUser = targetUserResult[0];
+      
+      let nextStatus = 'EXPIRED';
+      if (!targetUser.subscriptionStartAt) {
+          nextStatus = 'TRIAL';
+      }
+
+      const updatedUserResult = await db.update(users)
+        .set({ subscriptionStatus: nextStatus })
+        .where(eq(users.id, payment.userId))
+        .returning();
+
+      res.json({ payment: payment, user: updatedUserResult[0] });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+// Global error handler
