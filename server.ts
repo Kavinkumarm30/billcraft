@@ -187,19 +187,29 @@ const PORT = 3000;
         responseMimeType: "application/json",
       };
 
-      try {
-        response = await ai.models.generateContent({
-          model: "gemini-flash-latest",
-          contents: [{ role: "user", parts: promptParts }],
-          config: modelConfig
-        });
-      } catch (firstErr) {
-        console.warn("Primary model gemini-flash-latest failed, trying fallback gemini-3.6-flash:", firstErr);
-        response = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: [{ role: "user", parts: promptParts }],
-          config: modelConfig
-        });
+      const modelChain = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-latest"];
+      let response;
+      let lastError;
+
+      for (const modelName of modelChain) {
+        try {
+          response = await ai.models.generateContent({
+            model: modelName,
+            contents: [{ role: "user", parts: promptParts }],
+            config: modelConfig
+          });
+          if (response && response.text) {
+            console.log(`Successfully generated OCR content using model: ${modelName}`);
+            break;
+          }
+        } catch (err: any) {
+          console.warn(`Gemini model ${modelName} error, trying next fallback:`, err.message || err);
+          lastError = err;
+        }
+      }
+
+      if (!response || !response.text) {
+        throw lastError || new Error("Failed to extract bill data from AI model");
       }
       
       let resultText = response.text;
