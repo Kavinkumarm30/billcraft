@@ -178,10 +178,100 @@ app.use(express.json({ limit: '10mb' }));
       }
       
       const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
-      res.json(allUsers);
+      const allSettings = await db.select().from(companySettings);
+      const settingsMap = new Map(allSettings.map(s => [s.orgId, s]));
+
+      const enrichedUsers = allUsers.map(user => {
+        const setting = user.orgId ? settingsMap.get(user.orgId) : null;
+        return {
+          ...user,
+          dedicatedApiKey: setting?.dedicatedApiKey || null,
+        };
+      });
+
+      res.json(enrichedUsers);
     } catch (error: any) {
-      
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Assign Dedicated API Key to a User's Organization
+  app.put("/api/admin/users/:id/api-key", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (u.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Super Admin only" });
+      }
+
+      const userId = parseInt(req.params.id);
+      const { apiKey } = req.body;
+
+      const targetUsers = await db.select().from(users).where(eq(users.id, userId));
+      if (targetUsers.length === 0) return res.status(404).json({ error: "User not found" });
+      const targetUser = targetUsers[0];
+
+      if (!targetUser.orgId) {
+        return res.status(400).json({ error: "User has no associated organization" });
+      }
+
+      const cleanedKey = apiKey && typeof apiKey === 'string' && apiKey.trim().length > 0 ? apiKey.trim() : null;
+
+      const existingSettings = await db.select().from(companySettings).where(eq(companySettings.orgId, targetUser.orgId));
+      if (existingSettings.length === 0) {
+        await db.insert(companySettings).values({
+          orgId: targetUser.orgId,
+          dedicatedApiKey: cleanedKey,
+        });
+      } else {
+        await db.update(companySettings)
+          .set({ dedicatedApiKey: cleanedKey, updatedAt: new Date() })
+          .where(eq(companySettings.orgId, targetUser.orgId));
+      }
+
+      res.json({ success: true, dedicatedApiKey: cleanedKey });
+    } catch (error: any) {
+      console.error("Assign API Key error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Admin Test Any API Key Live
+  app.post("/api/admin/test-api-key", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      if (req.dbUser.role !== 'SUPER_ADMIN') {
+        return res.status(403).json({ error: "Forbidden: Super Admin only" });
+      }
+
+      const { apiKey } = req.body;
+      if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+        return res.status(400).json({ error: "Please provide an API key to test" });
+      }
+
+      const testAI = new GoogleGenAI({ apiKey: apiKey.trim() });
+      const modelChain = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3-flash-preview"];
+      let testResponse;
+      let lastTestError;
+
+      for (const modelName of modelChain) {
+        try {
+          testResponse = await testAI.models.generateContent({
+            model: modelName,
+            contents: [{ role: "user", parts: [{ text: "Respond with the word OK." }] }],
+            config: { maxOutputTokens: 10 }
+          });
+          if (testResponse && testResponse.text) break;
+        } catch (err: any) {
+          lastTestError = err;
+        }
+      }
+
+      if (testResponse && testResponse.text) {
+        return res.json({ success: true, message: "API Key is valid and active!" });
+      }
+      throw lastTestError || new Error("Failed to communicate with Gemini API");
+    } catch (error: any) {
+      console.error("Test API Key error:", error);
+      return res.status(400).json({ error: error.message || "Invalid API key or network error" });
     }
   });
 
@@ -214,15 +304,28 @@ app.use(express.json({ limit: '10mb' }));
     }
   });
 
-  // OCR & Extraction Route (Supports Single or Multi-page Bills)
+  // OCR & Extraction Route (Supports Single or Multi-page Bills & Dedicated API Keys)
   app.post("/api/extract", requireAuth, upload.any(), async (req: AuthRequest, res) => {
     try {
+      const u = req.dbUser;
       const files = (req.files as Express.Multer.File[]) || (req.file ? [req.file] : []);
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No image file(s) uploaded" });
       }
       
-      console.log(`Received ${files.length} bill page(s) for AI extraction`);
+      // Determine effective API key: Per-user dedicated API key if assigned, or platform fallback
+      let effectiveApiKey = process.env.GEMINI_API_KEY || "dummy_key_if_missing";
+      let isDedicated = false;
+      if (u.orgId) {
+        const orgSettings = await db.select().from(companySettings).where(eq(companySettings.orgId, u.orgId));
+        if (orgSettings[0]?.dedicatedApiKey) {
+          effectiveApiKey = orgSettings[0].dedicatedApiKey;
+          isDedicated = true;
+        }
+      }
+
+      console.log(`Processing ${files.length} bill page(s) using ${isDedicated ? 'DEDICATED API KEY' : 'DEFAULT API KEY'} for user ${u.email} (Org: ${u.orgId})`);
+      const userAI = new GoogleGenAI({ apiKey: effectiveApiKey });
 
       // Build inlineData for every page uploaded
       const imageParts = files.map((file, idx) => ({
@@ -283,7 +386,7 @@ app.use(express.json({ limit: '10mb' }));
 
       for (const modelName of modelChain) {
         try {
-          response = await ai.models.generateContent({
+          response = await userAI.models.generateContent({
             model: modelName,
             contents: [{ role: "user", parts: promptParts }],
             config: modelConfig

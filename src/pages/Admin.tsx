@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, UserX, UserCheck, Loader2, Check, X, LayoutTemplate, ExternalLink, Sparkles, FileText, CheckCircle2 } from 'lucide-react';
+import { Shield, UserX, UserCheck, Loader2, Check, X, LayoutTemplate, ExternalLink, Sparkles, FileText, CheckCircle2, Key, KeyRound, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
+import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import { predefinedLayouts } from './Settings';
 
@@ -18,6 +19,13 @@ export default function Admin() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedLayoutForUser, setSelectedLayoutForUser] = useState<string>('orange-classic');
   const [isDesignModalOpen, setIsDesignModalOpen] = useState(false);
+
+  // Dedicated API Key Modal State for Admin
+  const [selectedUserForApiKey, setSelectedUserForApiKey] = useState<any | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [isTestingKey, setIsTestingKey] = useState(false);
+  const [testKeyResult, setTestKeyResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const { data: users, isLoading: usersLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -55,6 +63,69 @@ export default function Admin() {
     }
   });
 
+  const assignApiKeyMutation = useMutation({
+    mutationFn: async ({ userId, apiKey }: { userId: number; apiKey: string }) => {
+      const token = await getToken();
+      const res = await fetch(`/api/admin/users/${userId}/api-key`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ apiKey })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to update API key');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      setIsKeyModalOpen(false);
+      setSelectedUserForApiKey(null);
+      setApiKeyInput('');
+      setTestKeyResult(null);
+      toast.success('Dedicated API key assigned to user successfully!');
+    },
+    onError: (err: any) => {
+      toast.error(err.message || 'Failed to assign API key');
+    }
+  });
+
+  const handleTestKey = async () => {
+    if (!apiKeyInput.trim()) {
+      toast.error('Please enter an API key first');
+      return;
+    }
+    setIsTestingKey(true);
+    setTestKeyResult(null);
+    try {
+      const token = await getToken();
+      const res = await fetch('/api/admin/test-api-key', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ apiKey: apiKeyInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestKeyResult({ success: true, message: '✅ Valid & Active! Gemini API responded successfully.' });
+        toast.success('API Key is valid!');
+      } else {
+        setTestKeyResult({ success: false, message: `❌ ${data.error || 'Invalid API Key'}` });
+        toast.error('API key verification failed');
+      }
+    } catch (err: any) {
+      setTestKeyResult({ success: false, message: `❌ ${err.message || 'Connection failed'}` });
+      toast.error('Failed to test API key');
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
+
   const toggleMutation = useMutation({
     mutationFn: async (userId: number) => {
       const token = await getToken();
@@ -67,7 +138,7 @@ export default function Admin() {
     },
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(['admin-users'], (oldData: any[]) => {
-        return oldData.map((u) => u.id === updatedUser.id ? updatedUser : u);
+        return oldData.map((u) => u.id === updatedUser.id ? { ...u, ...updatedUser } : u);
       });
       toast.success(updatedUser.isActive ? 'Access granted' : 'Access revoked');
     },
@@ -216,6 +287,7 @@ export default function Admin() {
                   <tr>
                     <th className="px-6 py-4">User</th>
                     <th className="px-6 py-4">Subscription</th>
+                    <th className="px-6 py-4">Dedicated API Key</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
@@ -239,6 +311,24 @@ export default function Admin() {
                         )}
                       </td>
                       <td className="px-6 py-4">
+                        {u.dedicatedApiKey ? (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                              <Key className="w-3 h-3 text-purple-600" />
+                              {u.dedicatedApiKey.slice(0, 6)}...{u.dedicatedApiKey.slice(-4)}
+                            </span>
+                            <p className="text-[10px] text-purple-700 font-medium">Dedicated 15 RPM Quota</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                              Default Platform Key
+                            </span>
+                            <p className="text-[10px] text-gray-400">Shared free quota</p>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
                         {u.isActive ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                             Active
@@ -250,31 +340,49 @@ export default function Admin() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {u.email !== user?.email && (
+                        <div className="flex items-center justify-end gap-2">
                           <Button
-                            variant={u.isActive ? "outline" : "default"}
+                            variant="outline"
                             size="sm"
-                            onClick={() => toggleMutation.mutate(u.id)}
-                            disabled={toggleMutation.isPending}
-                            className={!u.isActive ? "bg-black hover:bg-gray-800" : "text-red-600 hover:text-red-700 hover:bg-red-50"}
+                            onClick={() => {
+                              setSelectedUserForApiKey(u);
+                              setApiKeyInput(u.dedicatedApiKey || '');
+                              setTestKeyResult(null);
+                              setIsKeyModalOpen(true);
+                            }}
+                            className="border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold h-8"
+                            title="Assign or change dedicated Gemini API key for this user"
                           >
-                            {u.isActive ? (
-                              <>
-                                <UserX className="h-4 w-4 mr-2" /> Revoke Access
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="h-4 w-4 mr-2" /> Grant Access
-                              </>
-                            )}
+                            <KeyRound className="w-3.5 h-3.5 mr-1" />
+                            {u.dedicatedApiKey ? 'Edit API Key' : 'Assign API Key'}
                           </Button>
-                        )}
+
+                          {u.email !== user?.email && (
+                            <Button
+                              variant={u.isActive ? "outline" : "default"}
+                              size="sm"
+                              onClick={() => toggleMutation.mutate(u.id)}
+                              disabled={toggleMutation.isPending}
+                              className={!u.isActive ? "bg-black hover:bg-gray-800 h-8 text-xs font-bold" : "text-red-600 hover:text-red-700 hover:bg-red-50 h-8 text-xs font-bold"}
+                            >
+                              {u.isActive ? (
+                                <>
+                                  <UserX className="h-3.5 w-3.5 mr-1" /> Revoke
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="h-3.5 w-3.5 mr-1" /> Grant
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {users?.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
                         No users found.
                       </td>
                     </tr>
@@ -535,6 +643,142 @@ export default function Admin() {
               {approveLayoutMutation.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
               Grant Layout Access to User
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Admin Assign Dedicated API Key Dialog Modal */}
+      <Dialog open={isKeyModalOpen} onOpenChange={setIsKeyModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Key className="w-4 h-4 text-purple-600" />
+              Dedicated API Key for {selectedUserForApiKey?.email}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-gray-500">
+              Assign a dedicated Google Gemini API key to this organization. All their handwritten and printed bill OCR extractions will run exclusively on their own dedicated 15 RPM free quota.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="dedicatedKeyInput" className="text-xs font-bold text-gray-700">
+                  Google Gemini API Key:
+                </Label>
+                <a 
+                  href="https://aistudio.google.com/apikey" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-[11px] text-purple-600 hover:underline font-semibold flex items-center gap-0.5"
+                >
+                  Create Free Key in AI Studio <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <Input
+                id="dedicatedKeyInput"
+                type="text"
+                placeholder="AIzaSy..."
+                value={apiKeyInput}
+                onChange={(e) => {
+                  setApiKeyInput(e.target.value);
+                  setTestKeyResult(null);
+                }}
+                className="font-mono text-xs h-10"
+              />
+            </div>
+
+            {/* Test Connection Button & Live Status Alert */}
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTestKey}
+                disabled={isTestingKey || !apiKeyInput.trim()}
+                className="text-xs font-bold h-8 border-purple-200 text-purple-700 hover:bg-purple-50"
+              >
+                {isTestingKey ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Testing with Gemini...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Test Key Connection
+                  </>
+                )}
+              </Button>
+
+              <span className="text-[10px] text-gray-400">
+                Tests model availability live
+              </span>
+            </div>
+
+            {testKeyResult && (
+              <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
+                testKeyResult.success 
+                  ? 'bg-green-50 text-green-800 border border-green-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                {testKeyResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p>{testKeyResult.message}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 text-[11px] text-purple-900 space-y-1">
+              <p className="font-bold flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Free Tier Scaling Guarantee:
+              </p>
+              <p className="text-purple-700 leading-relaxed">
+                By assigning dedicated free keys created under separate Google accounts, this client will never hit rate limits caused by other users on your platform.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 flex flex-col sm:flex-row sm:justify-between">
+            {selectedUserForApiKey?.dedicatedApiKey && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  assignApiKeyMutation.mutate({
+                    userId: selectedUserForApiKey.id,
+                    apiKey: ''
+                  });
+                }}
+                disabled={assignApiKeyMutation.isPending}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-bold order-2 sm:order-1"
+              >
+                Remove Dedicated Key (Reset to Default)
+              </Button>
+            )}
+
+            <div className="flex items-center gap-2 justify-end order-1 sm:order-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setIsKeyModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!selectedUserForApiKey) return;
+                  assignApiKeyMutation.mutate({
+                    userId: selectedUserForApiKey.id,
+                    apiKey: apiKeyInput
+                  });
+                }}
+                disabled={assignApiKeyMutation.isPending || (!apiKeyInput.trim() && !selectedUserForApiKey?.dedicatedApiKey)}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs"
+              >
+                {assignApiKeyMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                Save & Assign Key
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

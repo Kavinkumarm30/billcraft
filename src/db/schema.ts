@@ -47,6 +47,7 @@ export const companySettings = pgTable('company_settings', {
   invoicePrefix: text('invoice_prefix').default('INV-'),
   invoiceLayout: text('invoice_layout').default('standard'),
   hasCustomLayoutAccess: boolean('has_custom_layout_access').notNull().default(false),
+  dedicatedApiKey: text('dedicated_api_key'), // Admin-assigned dedicated Gemini API key for this organization
   footer: text('footer'),
   terms: text('terms'),
   createdAt: timestamp('created_at').defaultNow(),
