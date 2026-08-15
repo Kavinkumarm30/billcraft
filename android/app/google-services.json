@@ -1,0 +1,34 @@
+{
+  "project_info": {
+    "project_number": "515512743607",
+    "project_id": "billcraft-8c8c2",
+    "storage_bucket": "billcraft-8c8c2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:515512743607:android:33810c637d9d76465a7f32",
+        "android_client_info": {
+          "package_name": "com.billcraft.studio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "515512743607-mock.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHLIKwj0-TuQ5xE7MdbjT3ib7DDfqCf_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
