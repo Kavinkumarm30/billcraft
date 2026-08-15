@@ -28,7 +28,7 @@ public class User implements Serializable {
     @SerializedName("trialInvoicesRemaining")
     private int trialInvoicesRemaining;
 
-    // Getters and Setters
+    // Getters
     public int getId() { return id; }
     public String getUid() { return uid; }
     public String getEmail() { return email; }
@@ -37,4 +37,14 @@ public class User implements Serializable {
     public Integer getOrgId() { return orgId; }
     public String getSubscriptionStatus() { return subscriptionStatus; }
     public int getTrialInvoicesRemaining() { return trialInvoicesRemaining; }
+
+    // Setters
+    public void setId(int id) { this.id = id; }
+    public void setUid(String uid) { this.uid = uid; }
+    public void setEmail(String email) { this.email = email; }
+    public void setName(String name) { this.name = name; }
+    public void setRole(String role) { this.role = role; }
+    public void setOrgId(Integer orgId) { this.orgId = orgId; }
+    public void setSubscriptionStatus(String subscriptionStatus) { this.subscriptionStatus = subscriptionStatus; }
+    public void setTrialInvoicesRemaining(int trialInvoicesRemaining) { this.trialInvoicesRemaining = trialInvoicesRemaining; }
 }
