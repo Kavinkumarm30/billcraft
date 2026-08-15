@@ -6,9 +6,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Plus, Trash2, ArrowRight, Loader2, CreditCard, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, Loader2, CreditCard, CheckCircle2, Circle, ChevronLeft, ChevronRight, Layers, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
+import { Dialog, DialogContent } from '../components/ui/dialog';
 
 export default function ReviewOCR() {
   const navigate = useNavigate();
@@ -17,6 +18,10 @@ export default function ReviewOCR() {
   
   const [data, setData] = useState<any>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [activePageIndex, setActivePageIndex] = useState<number>(0);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
@@ -36,6 +41,7 @@ export default function ReviewOCR() {
     }
 
     const savedData = sessionStorage.getItem('extractedBillData');
+    const savedImagesStr = sessionStorage.getItem('billImagePreviews');
     const savedImage = sessionStorage.getItem('billImagePreview');
     
     if (!savedData) {
@@ -91,7 +97,24 @@ export default function ReviewOCR() {
       navigate('/bills/create');
     }
     
-    if (savedImage) setImagePreview(savedImage);
+    // Parse multi-page previews
+    let previewsList: string[] = [];
+    if (savedImagesStr) {
+      try {
+        const parsedPreviews = JSON.parse(savedImagesStr);
+        if (Array.isArray(parsedPreviews) && parsedPreviews.length > 0) {
+          previewsList = parsedPreviews;
+        }
+      } catch (e) {}
+    }
+    if (previewsList.length === 0 && savedImage) {
+      previewsList = [savedImage];
+    }
+
+    setImagePreviews(previewsList);
+    if (previewsList.length > 0) {
+      setImagePreview(previewsList[0]);
+    }
   }, [navigate, location]);
 
   const updateField = (field: string, value: string | number) => {
@@ -273,19 +296,111 @@ export default function ReviewOCR() {
         </div>
       </div>
 
-      <div className={`grid ${imagePreview ? 'lg:grid-cols-2' : 'lg:grid-cols-1 max-w-4xl mx-auto'} gap-8`}>
-        {/* Left Col - Image Reference */}
-        {imagePreview && (
-        <div className="space-y-6">
-          <Card className="border-0 shadow-sm ring-1 ring-gray-100 sticky top-6">
-            <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-              <CardTitle className="text-sm font-medium">Original Document</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0 overflow-hidden bg-gray-900 flex justify-center">
-              <img src={imagePreview} alt="Original Bill" className="w-full max-h-[800px] object-contain" />
-            </CardContent>
-          </Card>
-        </div>
+      <div className={`grid ${imagePreviews.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1 max-w-4xl mx-auto'} gap-8`}>
+        {/* Left Col - Multi-Page Image Reference */}
+        {imagePreviews.length > 0 && (
+          <div className="space-y-6">
+            <Card className="border-0 shadow-sm ring-1 ring-gray-100 sticky top-6 overflow-hidden">
+              <CardHeader className="bg-gray-50/80 border-b border-gray-100 py-3.5 px-4 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-gray-700" />
+                  <CardTitle className="text-sm font-bold text-gray-900">
+                    Original Bill {imagePreviews.length > 1 && `(Page ${activePageIndex + 1} of ${imagePreviews.length})`}
+                  </CardTitle>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {imagePreviews.length > 1 && (
+                    <div className="flex items-center bg-gray-200/80 rounded-lg p-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-md text-gray-700 hover:bg-white"
+                        disabled={activePageIndex === 0}
+                        onClick={() => {
+                          const nextIdx = Math.max(0, activePageIndex - 1);
+                          setActivePageIndex(nextIdx);
+                          setImagePreview(imagePreviews[nextIdx]);
+                        }}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-[11px] font-bold px-2 text-gray-800">
+                        {activePageIndex + 1}/{imagePreviews.length}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-md text-gray-700 hover:bg-white"
+                        disabled={activePageIndex === imagePreviews.length - 1}
+                        onClick={() => {
+                          const nextIdx = Math.min(imagePreviews.length - 1, activePageIndex + 1);
+                          setActivePageIndex(nextIdx);
+                          setImagePreview(imagePreviews[nextIdx]);
+                        }}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs font-bold px-2.5 bg-white hover:bg-gray-100"
+                    onClick={() => setIsZoomOpen(true)}
+                  >
+                    <Eye className="h-3.5 w-3.5 mr-1" /> Expand
+                  </Button>
+                </div>
+              </CardHeader>
+
+              {/* Active Image Canvas */}
+              <div 
+                className="p-0 overflow-hidden bg-gray-950 flex justify-center cursor-pointer relative group"
+                onClick={() => setIsZoomOpen(true)}
+              >
+                <img 
+                  src={imagePreviews[activePageIndex] || imagePreview} 
+                  alt={`Original Bill Page ${activePageIndex + 1}`} 
+                  className="w-full max-h-[750px] object-contain transition-transform group-hover:scale-102" 
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1 pointer-events-none">
+                  <Eye className="w-4 h-4" /> Click to Zoom
+                </div>
+              </div>
+
+              {/* Multi-Page Thumbnails Switcher */}
+              {imagePreviews.length > 1 && (
+                <div className="p-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2 overflow-x-auto">
+                  {imagePreviews.map((url, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setActivePageIndex(idx);
+                        setImagePreview(url);
+                      }}
+                      className={`relative shrink-0 rounded-lg overflow-hidden border-2 transition-all p-0.5 ${
+                        activePageIndex === idx 
+                          ? 'border-black ring-2 ring-black/20 bg-white' 
+                          : 'border-gray-200 hover:border-gray-400 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img 
+                        src={url} 
+                        alt={`Thumb ${idx + 1}`} 
+                        className="h-14 w-14 object-cover rounded" 
+                      />
+                      <span className="absolute bottom-1 right-1 bg-black/80 text-white text-[9px] font-black px-1 rounded">
+                        P{idx + 1}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
         )}
 
         {/* Right Col - Editable Form */}
@@ -590,6 +705,50 @@ export default function ReviewOCR() {
           </Card>
         </div>
       </div>
+
+      {/* Enlarged Page Zoom Modal */}
+      <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
+        <DialogContent className="max-w-5xl p-2 bg-black/95 border-0">
+          <div className="flex flex-col items-center justify-center p-2">
+            <img 
+              src={imagePreviews[activePageIndex] || imagePreview} 
+              alt={`Page ${activePageIndex + 1}`} 
+              className="max-h-[85vh] max-w-full object-contain rounded" 
+            />
+            {imagePreviews.length > 1 && (
+              <div className="flex items-center gap-3 mt-3 text-white text-xs font-bold">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={activePageIndex === 0}
+                  onClick={() => {
+                    const nextIdx = Math.max(0, activePageIndex - 1);
+                    setActivePageIndex(nextIdx);
+                    setImagePreview(imagePreviews[nextIdx]);
+                  }}
+                  className="bg-white/10 text-white border-white/20 hover:bg-white/20 h-8"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Previous Page
+                </Button>
+                <span>Page {activePageIndex + 1} of {imagePreviews.length}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={activePageIndex === imagePreviews.length - 1}
+                  onClick={() => {
+                    const nextIdx = Math.min(imagePreviews.length - 1, activePageIndex + 1);
+                    setActivePageIndex(nextIdx);
+                    setImagePreview(imagePreviews[nextIdx]);
+                  }}
+                  className="bg-white/10 text-white border-white/20 hover:bg-white/20 h-8"
+                >
+                  Next Page <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

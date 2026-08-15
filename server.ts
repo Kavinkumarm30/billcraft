@@ -214,24 +214,37 @@ app.use(express.json({ limit: '10mb' }));
     }
   });
 
-  // OCR & Extraction Route
-  app.post("/api/extract", requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+  // OCR & Extraction Route (Supports Single or Multi-page Bills)
+  app.post("/api/extract", requireAuth, upload.any(), async (req: AuthRequest, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
+      const files = (req.files as Express.Multer.File[]) || (req.file ? [req.file] : []);
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No image file(s) uploaded" });
       }
       
-      const base64Image = req.file.buffer.toString("base64");
+      console.log(`Received ${files.length} bill page(s) for AI extraction`);
+
+      // Build inlineData for every page uploaded
+      const imageParts = files.map((file, idx) => ({
+        inlineData: {
+          mimeType: file.mimetype,
+          data: file.buffer.toString("base64"),
+        }
+      }));
       
       const promptParts = [
+        ...imageParts,
         {
-          inlineData: {
-            mimeType: req.file.mimetype,
-            data: base64Image,
-          }
-        },
-        {
-          text: `Extract the details from this handwritten or printed bill/invoice into structured JSON format.
+          text: `You are an expert OCR & invoice transcription AI.
+          You are provided with ${files.length} consecutive image(s)/page(s) of a handwritten or printed bill/invoice.
+          
+          CRITICAL MULTI-PAGE INSTRUCTIONS:
+          1. Treat all provided images as consecutive pages (Page 1, Page 2, Page 3...) of the SAME invoice/bill.
+          2. Sequentially extract and COMBINE ALL LINE ITEMS from every single page into the unified "items" array in exact top-to-bottom page order. Do NOT skip any items from any page.
+          3. Extract customer name, phone number, address, invoice number, and bill date (usually on the first page header or summary).
+          4. Subtotal: Sum of all item amounts across all pages.
+          5. Tax / GST / Discount / Grand Total: Extract or calculate the overall final grand total across all pages (usually found on the final page summary).
+          6. Notes: Include any extra notes, payment instructions, or terms mentioned on any page.
           
           Follow this exact JSON structure:
           {
@@ -255,7 +268,7 @@ app.use(express.json({ limit: '10mb' }));
             "notes": "string"
           }
           
-          Respond ONLY with valid JSON. No markdown tags. Do your best to transcribe the handwriting.`
+          Respond ONLY with valid JSON. No markdown tags or explanatory text. Transcribe all handwriting and numbers as accurately as possible.`
         }
       ];
 
@@ -276,7 +289,7 @@ app.use(express.json({ limit: '10mb' }));
             config: modelConfig
           });
           if (response && response.text) {
-            console.log(`Successfully generated OCR content using model: ${modelName}`);
+            console.log(`Successfully generated multi-page OCR content using model: ${modelName} (${files.length} pages processed)`);
             break;
           }
         } catch (err: any) {
@@ -301,7 +314,7 @@ app.use(express.json({ limit: '10mb' }));
       res.json(parsedData);
       
     } catch (error: any) {
-      console.error("Extraction error:", error);
+      console.error("Multi-page extraction error:", error);
       res.status(500).json({ error: error.message || "Failed to extract data" });
     }
   });
