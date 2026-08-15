@@ -11,6 +11,9 @@ public class DashboardStats implements Serializable {
     @SerializedName("billsGenerated")
     private int billsGenerated;
 
+    @SerializedName("pendingBills")
+    private int pendingBills;
+
     @SerializedName("totalCustomers")
     private int totalCustomers;
 
@@ -19,6 +22,7 @@ public class DashboardStats implements Serializable {
 
     public double getTodaysRevenue() { return todaysRevenue; }
     public int getBillsGenerated() { return billsGenerated; }
+    public int getPendingBills() { return pendingBills; }
     public int getTotalCustomers() { return totalCustomers; }
     public List<RecentActivityItem> getRecentActivity() { return recentActivity; }
 
