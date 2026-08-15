@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { toast } from 'sonner';
 
 export default function Login() {
-  const { login, loginWithRedirect, user } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -24,16 +24,12 @@ export default function Login() {
     return null;
   }
 
-  const handleLogin = async (useRedirect = false) => {
+  const handleLogin = async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
-      if (useRedirect) {
-        await loginWithRedirect();
-      } else {
-        await login();
-        navigate('/dashboard', { replace: true });
-      }
+      await login();
+      navigate('/dashboard', { replace: true });
       toast.success('Logged in successfully');
     } catch (error: any) {
       console.error("Login Error:", error);
@@ -75,21 +71,12 @@ export default function Login() {
             )}
 
             <Button 
-              className="w-full h-12 text-base font-medium" 
-              onClick={() => handleLogin(false)}
+              className="w-full h-12 text-base font-medium bg-black hover:bg-gray-800 text-white rounded-xl shadow-md transition-all active:scale-95" 
+              onClick={() => handleLogin()}
               disabled={loading}
             >
               {loading ? 'Signing in...' : 'Sign in with Google'}
               {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
-
-            <Button 
-              variant="outline"
-              className="w-full text-xs text-gray-600" 
-              onClick={() => handleLogin(true)}
-              disabled={loading}
-            >
-              Alternative: Sign in with Page Redirect
             </Button>
 
             <div className="text-center text-xs text-gray-500 mt-4">
