@@ -1058,17 +1058,38 @@ app.use(express.json({ limit: '10mb' }));
       const u = req.dbUser;
       if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
 
-      const { companyName, ...settingData } = req.body;
+      // SECURITY: Whitelist allowed fields to prevent mass assignment of administrative flags
+      const { companyName, address, phone, email, website, gstNo, panNo, bankName, accountNo, ifsc, upiId, invoicePrefix, invoiceLayout, footer, terms, logoUrl } = req.body;
       
       if (companyName) {
         await db.update(organizations)
-          .set({ name: companyName })
+          .set({ name: String(companyName).trim() })
           .where(eq(organizations.id, u.orgId));
       }
 
-      if (Object.keys(settingData).length > 0) {
+      const safeSettingData: Record<string, any> = {};
+      if (address !== undefined) safeSettingData.address = address;
+      if (phone !== undefined) safeSettingData.phone = phone;
+      if (email !== undefined) safeSettingData.email = email;
+      if (website !== undefined) safeSettingData.website = website;
+      if (gstNo !== undefined) safeSettingData.gstNo = gstNo;
+      if (panNo !== undefined) safeSettingData.panNo = panNo;
+      if (bankName !== undefined) safeSettingData.bankName = bankName;
+      if (accountNo !== undefined) safeSettingData.accountNo = accountNo;
+      if (ifsc !== undefined) safeSettingData.ifsc = ifsc;
+      if (upiId !== undefined) safeSettingData.upiId = upiId;
+      if (invoicePrefix !== undefined) safeSettingData.invoicePrefix = invoicePrefix;
+      if (invoiceLayout !== undefined) safeSettingData.invoiceLayout = invoiceLayout;
+      if (footer !== undefined) safeSettingData.footer = footer;
+      if (terms !== undefined) safeSettingData.terms = terms;
+      if (logoUrl !== undefined) safeSettingData.logoUrl = logoUrl;
+
+      if (Object.keys(safeSettingData).length > 0) {
         await db.update(companySettings)
-          .set(settingData)
+          .set({
+            ...safeSettingData,
+            updatedAt: new Date()
+          })
           .where(eq(companySettings.orgId, u.orgId));
       }
         
@@ -1078,8 +1099,7 @@ app.use(express.json({ limit: '10mb' }));
 
       res.json({ success: true });
     } catch (error: any) {
-      
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to complete onboarding' : error.message });
     }
   });
 
