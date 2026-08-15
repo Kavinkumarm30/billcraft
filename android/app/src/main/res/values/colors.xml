@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BillCraft Signature Theme Palette -->
+    <color name="primary_black">#18181B</color>
+    <color name="primary_dark">#09090B</color>
+    <color name="accent_silver">#71717A</color>
+    <color name="accent_silver_light">#F4F4F5</color>
+    <color name="brand_orange">#E25704</color>
+    
+    <!-- UI Colors -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_border">#E4E4E7</color>
+    <color name="app_background">#FAFAFA</color>
+    <color name="text_primary">#09090B</color>
+    <color name="text_secondary">#71717A</color>
+    <color name="text_muted">#A1A1AA</color>
+    
+    <!-- Status Badges -->
+    <color name="status_green_bg">#DCFCE7</color>
+    <color name="status_green_text">#15803D</color>
+    <color name="status_orange_bg">#FFEDD5</color>
+    <color name="status_orange_text">#C2410C</color>
+    <color name="status_red_bg">#FEE2E2</color>
+    <color name="status_red_text">#B91C1C</color>
+</resources>

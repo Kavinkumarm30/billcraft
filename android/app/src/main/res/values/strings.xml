@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BillCraft</string>
+    <string name="tagline">AI-Powered Studio Invoicing</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="dashboard">Dashboard</string>
+    <string name="snap_bill">Snap &amp; Extract Bill</string>
+    <string name="create_invoice">Create Invoice</string>
+    <string name="todays_revenue">Today\'s Revenue</string>
+    <string name="bills_generated">Bills Generated</string>
+    <string name="total_customers">Total Customers</string>
+    <string name="recent_activity">Recent Activity</string>
+    <string name="save_and_preview">Review &amp; Generate PDF</string>
+    <string name="share_via_whatsapp">Share via WhatsApp</string>
+    <string name="download_pdf">Save PDF</string>
+</resources>
