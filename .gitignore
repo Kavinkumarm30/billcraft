@@ -8,3 +8,11 @@ coverage/
 !.env.example
 
 .vercel
+
+# Android build and IDE files
+android/.gradle/
+android/app/build/
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/local.properties
