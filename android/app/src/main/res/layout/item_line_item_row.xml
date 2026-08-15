@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="6dp"
+    android:gravity="center_vertical">
+
+    <EditText
+        android:id="@+id/etDescription"
+        android:layout_width="0dp"
+        android:layout_height="44dp"
+        android:layout_weight="3"
+        android:hint="Item Description"
+        android:background="@drawable/bg_card_silver"
+        android:paddingHorizontal="10dp"
+        android:textSize="13sp"
+        android:textColor="@color/text_primary" />
+
+    <EditText
+        android:id="@+id/etQty"
+        android:layout_width="0dp"
+        android:layout_height="44dp"
+        android:layout_weight="1"
+        android:layout_marginStart="6dp"
+        android:hint="Qty"
+        android:inputType="numberDecimal"
+        android:gravity="center"
+        android:background="@drawable/bg_card_silver"
+        android:textSize="13sp"
+        android:textColor="@color/text_primary" />
+
+    <EditText
+        android:id="@+id/etRate"
+        android:layout_width="0dp"
+        android:layout_height="44dp"
+        android:layout_weight="1.5"
+        android:layout_marginStart="6dp"
+        android:hint="Rate"
+        android:inputType="numberDecimal"
+        android:gravity="center"
+        android:background="@drawable/bg_card_silver"
+        android:textSize="13sp"
+        android:textColor="@color/text_primary" />
+
+    <TextView
+        android:id="@+id/tvAmount"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.5"
+        android:layout_marginStart="6dp"
+        android:gravity="end"
+        android:text="₹0"
+        android:textColor="@color/text_primary"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <ImageView
+        android:id="@+id/btnRemoveItem"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="6dp"
+        android:padding="6dp"
+        android:src="@android:drawable/ic_menu_delete"
+        android:contentDescription="Remove Item" />
+
+</LinearLayout>
