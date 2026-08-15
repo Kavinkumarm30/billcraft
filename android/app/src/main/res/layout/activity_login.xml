@@ -1,66 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_dark_gradient"
+    android:background="@drawable/bg_web_silver_gradient"
     android:gravity="center"
     android:orientation="vertical"
-    android:padding="28dp">
+    android:padding="24dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="⚡ BillCraft"
-        android:textColor="#FFFFFF"
-        android:textSize="32sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="AI-Powered Invoice &amp; Bill Extraction"
-        android:textColor="@color/text_muted"
-        android:textSize="14sp" />
-
-    <!-- Google Sign-In Card Button -->
+    <!-- Top Logo & Title Container -->
     <LinearLayout
-        android:id="@+id/btnGoogleSignIn"
-        android:layout_width="match_parent"
-        android:layout_height="54dp"
-        android:layout_marginTop="48dp"
-        android:background="@drawable/btn_primary_black"
-        android:clickable="true"
-        android:focusable="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:gravity="center"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp">
+        android:orientation="vertical">
+
+        <!-- Logo Box matching website -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="3dp"
+            app:cardBackgroundColor="#FFFFFF">
+
+            <ImageView
+                android:id="@+id/ivAppLogo"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/app_logo" />
+        </androidx.cardview.widget.CardView>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sign in with Google"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
+            android:layout_marginTop="16dp"
+            android:text="BillCraft Studio"
+            android:textColor="#111827"
+            android:textSize="26sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="Studio Management &amp; Billing Platform"
+            android:textColor="#6B7280"
+            android:textSize="13sp" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/btnQuickAccess"
+    <!-- Main Card Container matching website Card -->
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginTop="12dp"
-        android:backgroundTint="@color/card_background"
-        android:text="Quick Demo / Studio Access"
-        android:textColor="@color/brand_orange"
-        android:textSize="14sp" />
-
-    <TextView
-        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="Fast, safe &amp; secure access for studios"
-        android:textColor="@color/text_muted"
-        android:textSize="12sp" />
+        android:layout_marginTop="28dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="#FFFFFF">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Welcome back"
+                android:textColor="#111827"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="center"
+                android:text="Sign in to your organization account to continue"
+                android:textColor="#6B7280"
+                android:textSize="12sp" />
+
+            <!-- Google Sign-In Button -->
+            <LinearLayout
+                android:id="@+id/btnGoogleSignIn"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="24dp"
+                android:background="@drawable/bg_black_button"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingHorizontal="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Sign in with Google  ➔"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Quick Access Button for instant testing -->
+            <Button
+                android:id="@+id/btnQuickAccess"
+                android:layout_width="match_parent"
+                android:layout_height="46dp"
+                android:layout_marginTop="10dp"
+                android:backgroundTint="#F3F4F6"
+                android:text="⚡ Quick Demo / Studio Access"
+                android:textColor="#111827"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="By signing in, you agree to our Terms of Service and Privacy Policy."
+                android:textColor="#9CA3AF"
+                android:textSize="11sp" />
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
 
 </LinearLayout>

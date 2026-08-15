@@ -1,32 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_dark_gradient"
+    android:background="@drawable/bg_web_silver_gradient"
     android:gravity="center"
     android:orientation="vertical"
     android:padding="24dp">
 
+    <!-- Logo Card matching website -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="110dp"
+        android:layout_height="110dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="4dp"
+        app:cardBackgroundColor="#FFFFFF">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="16dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/app_logo" />
+    </androidx.cardview.widget.CardView>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="⚡ BillCraft"
-        android:textColor="#FFFFFF"
-        android:textSize="32sp"
+        android:layout_marginTop="20dp"
+        android:text="BillCraft Studio"
+        android:textColor="#111827"
+        android:textSize="28sp"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="@string/tagline"
-        android:textColor="@color/text_muted"
+        android:layout_marginTop="6dp"
+        android:text="Studio Management &amp; Billing Platform"
+        android:textColor="#6B7280"
         android:textSize="14sp" />
 
     <ProgressBar
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
-        android:indeterminateTint="@color/brand_orange" />
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginTop="36dp"
+        android:indeterminateTint="#111827" />
 
 </LinearLayout>
