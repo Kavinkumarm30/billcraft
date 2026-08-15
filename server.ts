@@ -178,8 +178,14 @@ app.use(express.json({ limit: '10mb' }));
       }
       
       const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
-      const allSettings = await db.select().from(companySettings);
-      const settingsMap = new Map(allSettings.map(s => [s.orgId, s]));
+      
+      let settingsMap = new Map();
+      try {
+        const allSettings = await db.select().from(companySettings);
+        settingsMap = new Map(allSettings.map(s => [s.orgId, s]));
+      } catch (settingsErr) {
+        console.warn("Could not load companySettings for users list:", settingsErr);
+      }
 
       const enrichedUsers = allUsers.map(user => {
         const setting = user.orgId ? settingsMap.get(user.orgId) : null;
@@ -191,6 +197,7 @@ app.use(express.json({ limit: '10mb' }));
 
       res.json(enrichedUsers);
     } catch (error: any) {
+      console.error("GET /api/admin/users error:", error);
       res.status(500).json({ error: error.message });
     }
   });

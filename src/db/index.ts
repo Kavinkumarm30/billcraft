@@ -59,3 +59,14 @@ pool.on('error', (err) => {
 
 // Initialize Drizzle with the pool and schema.
 export const db = drizzle(pool, { schema });
+
+// Auto-ensure database schema columns on startup
+(async () => {
+  try {
+    await pool.query(`
+      ALTER TABLE company_settings ADD COLUMN IF NOT EXISTS dedicated_api_key TEXT;
+    `);
+  } catch (err: any) {
+    console.warn('Auto-migration warning:', err.message || err);
+  }
+})();
