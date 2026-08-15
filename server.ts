@@ -19,10 +19,13 @@ import fs from "fs";
 // Initialize Gemini API for AI Extraction
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "dummy_key_if_missing" });
 
-// SECURITY: File upload with size limit and type validation (HIGH-05)
+// SECURITY: File upload with size limit, max file count, and type validation
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  limits: { 
+    fileSize: 5 * 1024 * 1024, // 5MB max per file
+    files: 10,                 // Max 10 bill pages / files per request (prevents memory exhaustion)
+  },
   fileFilter: (_req, file, cb) => {
     const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'application/pdf'];
     if (allowedMimes.includes(file.mimetype)) {
@@ -35,8 +38,11 @@ const upload = multer({
 
 export const app = express();
 const PORT = 3000;
+
+// SECURITY: Enable trust proxy so req.ip correctly resolves client IPs behind Vercel reverse proxies
+app.set('trust proxy', 1);
   
-// SECURITY: Security headers (HIGH-03)
+// SECURITY: Security headers
 app.use(helmet({
   contentSecurityPolicy: false, // Disabled for SPA compatibility; enable when ready
   crossOriginEmbedderPolicy: false,
@@ -148,13 +154,19 @@ app.use(express.json({ limit: '10mb' }));
       const settings = await db.select().from(companySettings).where(eq(companySettings.orgId, u.orgId));
       const setting = settings[0];
       
+      // SECURITY: Mask dedicatedApiKey so non-super-admins cannot view plaintext API keys
+      const isSuperAdmin = u.role === 'SUPER_ADMIN';
+      const safeDedicatedKey = setting?.dedicatedApiKey
+        ? (isSuperAdmin ? setting.dedicatedApiKey : `${setting.dedicatedApiKey.slice(0, 6)}...****`)
+        : null;
+
       res.json({
         ...setting,
-        companyName: org?.name
+        dedicatedApiKey: safeDedicatedKey,
+        companyName: org?.name || 'My Company'
       });
     } catch (error: any) {
-      
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to fetch settings' : error.message });
     }
   });
 
@@ -936,12 +948,16 @@ app.use(express.json({ limit: '10mb' }));
 
       const effectiveInvoiceId = targetInvoice.id;
 
-      // 1. Update or create customer
+      // 1. Update or create customer — ENTERPRISE: Use indexed DB query, not full table scan
       let customerId = targetInvoice.customerId;
       if (customerName) {
-        const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
-        const customer = existingCustomers.find(c => c.name.toLowerCase() === String(customerName).trim().toLowerCase());
-        if (customer) {
+        const trimmedName = String(customerName).trim();
+        const existingCustomers = await db.select().from(customers)
+          .where(and(eq(customers.orgId, u.orgId), ilike(customers.name, trimmedName)))
+          .limit(1);
+
+        if (existingCustomers.length > 0) {
+          const customer = existingCustomers[0];
           customerId = customer.id;
           if (phone !== undefined || address !== undefined) {
             await db.update(customers)
@@ -955,7 +971,7 @@ app.use(express.json({ limit: '10mb' }));
         } else {
           const newCustomer = await db.insert(customers).values({
             orgId: u.orgId,
-            name: String(customerName).trim(),
+            name: trimmedName,
             phone: phone ? String(phone).trim() : null,
             address: address ? String(address).trim() : null,
           }).returning();
@@ -1032,99 +1048,7 @@ app.use(express.json({ limit: '10mb' }));
       res.json({ success: true, message: "Invoice deleted successfully" });
     } catch (error: any) {
       console.error(error);
-      
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-
-  
-
-  // Settings endpoints
-  app.get("/api/settings", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const u = req.dbUser;
-      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
-
-      const orgs = await db.select().from(organizations).where(eq(organizations.id, u.orgId));
-      let settingsList = await db.select().from(companySettings).where(eq(companySettings.orgId, u.orgId));
-
-      if (settingsList.length === 0) {
-        const newSettings = await db.insert(companySettings).values({
-          orgId: u.orgId,
-          invoiceLayout: 'standard'
-        }).returning();
-        settingsList = newSettings;
-      }
-
-      const org = orgs[0] || { name: 'My Company' };
-      const currentSettings = settingsList[0];
-
-      res.json({
-        companyName: org.name || 'My Company',
-        ...currentSettings
-      });
-    } catch (error: any) {
-      console.error("Fetch settings error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.put("/api/settings", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const u = req.dbUser;
-      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
-
-      // SECURITY: Whitelist allowed settings fields to prevent mass assignment (HIGH-04)
-      const { companyName, address, phone, email, website, gstNo, panNo, bankName, accountNo, ifsc, upiId, invoicePrefix, invoiceLayout, footer, terms, logoUrl } = req.body;
-      const safeSettingData: Record<string, any> = {};
-      if (address !== undefined) safeSettingData.address = address;
-      if (phone !== undefined) safeSettingData.phone = phone;
-      if (email !== undefined) safeSettingData.email = email;
-      if (website !== undefined) safeSettingData.website = website;
-      if (gstNo !== undefined) safeSettingData.gstNo = gstNo;
-      if (panNo !== undefined) safeSettingData.panNo = panNo;
-      if (bankName !== undefined) safeSettingData.bankName = bankName;
-      if (accountNo !== undefined) safeSettingData.accountNo = accountNo;
-      if (ifsc !== undefined) safeSettingData.ifsc = ifsc;
-      if (upiId !== undefined) safeSettingData.upiId = upiId;
-      if (invoicePrefix !== undefined) safeSettingData.invoicePrefix = invoicePrefix;
-      if (invoiceLayout !== undefined) safeSettingData.invoiceLayout = invoiceLayout;
-      if (footer !== undefined) safeSettingData.footer = footer;
-      if (terms !== undefined) safeSettingData.terms = terms;
-      if (logoUrl !== undefined) safeSettingData.logoUrl = logoUrl;
-
-      if (companyName) {
-        await db.update(organizations)
-          .set({ name: companyName, updatedAt: new Date() })
-          .where(eq(organizations.id, u.orgId));
-      }
-
-      const existingSettings = await db.select().from(companySettings).where(eq(companySettings.orgId, u.orgId));
-      
-      let updatedSettings;
-      if (existingSettings.length === 0) {
-        updatedSettings = await db.insert(companySettings).values({
-          orgId: u.orgId,
-          ...safeSettingData,
-        }).returning();
-      } else {
-        updatedSettings = await db.update(companySettings)
-          .set({
-            ...safeSettingData,
-            updatedAt: new Date()
-          })
-          .where(eq(companySettings.orgId, u.orgId))
-          .returning();
-      }
-
-      res.json({
-        companyName: companyName || (await db.select().from(organizations).where(eq(organizations.id, u.orgId)))[0]?.name,
-        ...updatedSettings[0]
-      });
-    } catch (error: any) {
-      console.error("Update settings error:", error);
-      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to update settings' : error.message });
+      res.status(500).json({ error: process.env.NODE_ENV === 'production' ? 'Failed to delete invoice' : error.message });
     }
   });
 
