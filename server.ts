@@ -8,10 +8,10 @@ import express from "express";
 import path from "path";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { requireAuth, AuthRequest } from "./src/middleware/auth.ts";
-import { db } from "./src/db/index.ts";
+import { requireAuth, AuthRequest, invalidateUserCache, invalidateAllUserCaches } from "./src/middleware/auth.ts";
+import { db, pool } from "./src/db/index.ts";
 import { organizations, users, companySettings, customers, invoices, invoiceItems, payments, customLayoutRequests } from "./src/db/schema.ts";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, ilike, sql, count, sum, gte } from "drizzle-orm";
 import { GoogleGenAI } from "@google/genai";
 import multer from "multer";
 import fs from "fs";
@@ -64,28 +64,61 @@ app.use((req, res, next) => {
   next();
 });
 
-// SECURITY: Rate limiting (HIGH-02)
+// ENTERPRISE: Key rate limits by authenticated user (via token) with fallback to IP
+// Prevents shared office / mobile hotspot NATs from blocking all users on the same WiFi
+const getRateLimitKey = (req: express.Request) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7, 45); // Unique slice of bearer token
+  }
+  return req.ip || 'anonymous';
+};
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 200 requests per window per IP
+  max: 1000, // 1000 requests per 15 min window per user
+  keyGenerator: getRateLimitKey,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' }
 });
+
 const extractLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // 5 OCR requests per minute
-  message: { error: 'OCR rate limit exceeded. Please wait before trying again.' }
+  max: 15, // 15 OCR requests per minute per user (matching Gemini free quota)
+  keyGenerator: getRateLimitKey,
+  message: { error: 'OCR rate limit exceeded. Please wait a moment before trying again.' }
 });
+
 app.use('/api/', apiLimiter);
 app.use('/api/extract', extractLimiter);
+
+// ENTERPRISE: Request ID & duration tracking middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const requestId = Math.random().toString(36).substring(2, 10);
+  res.setHeader('X-Request-ID', requestId);
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    if (duration > 1500 && req.path !== '/api/extract') {
+      console.warn(`[SLOW REQUEST] ${req.method} ${req.path} (${res.statusCode}) - ${duration}ms [ReqID: ${requestId}]`);
+    }
+  });
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 
   // API Routes
   
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+  app.get("/api/health", async (req, res) => {
+    try {
+      const result = await pool.query("SELECT 1 as ok");
+      res.json({ status: "ok", db: "connected", timestamp: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(503).json({ status: "degraded", db: "disconnected", error: err.message });
+    }
   });
 
   // Current User Info
@@ -176,8 +209,13 @@ app.use(express.json({ limit: '10mb' }));
       if (u.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: "Forbidden: Super Admin only" });
       }
+
+      // ENTERPRISE: Support pagination for large user bases
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 200));
+      const offset = (page - 1) * limit;
       
-      const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+      const allUsers = await db.select().from(users).orderBy(desc(users.createdAt)).limit(limit).offset(offset);
       
       let settingsMap = new Map();
       try {
@@ -198,6 +236,39 @@ app.use(express.json({ limit: '10mb' }));
       res.json(enrichedUsers);
     } catch (error: any) {
       console.error("GET /api/admin/users error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Customers Endpoints
+  app.get("/api/customers", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const offset = (page - 1) * limit;
+      const search = (req.query.search as string || '').trim();
+
+      if (search) {
+        const results = await db.select().from(customers)
+          .where(and(eq(customers.orgId, u.orgId), ilike(customers.name, `%${search}%`)))
+          .orderBy(desc(customers.createdAt))
+          .limit(limit)
+          .offset(offset);
+        return res.json(results);
+      }
+
+      const orgCustomers = await db.select().from(customers)
+        .where(eq(customers.orgId, u.orgId))
+        .orderBy(desc(customers.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      res.json(orgCustomers);
+    } catch (error: any) {
+      console.error("Fetch customers error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -303,6 +374,11 @@ app.use(express.json({ limit: '10mb' }));
         .set({ isActive: !targetUser.isActive })
         .where(eq(users.id, userId))
         .returning();
+
+      // ENTERPRISE: Invalidate cached auth for this user so access change takes effect immediately
+      if (targetUser.uid) {
+        invalidateUserCache(targetUser.uid);
+      }
         
       res.json(updatedUser[0]);
     } catch (error: any) {
@@ -556,6 +632,11 @@ app.use(express.json({ limit: '10mb' }));
         .where(eq(users.id, targetUserId))
         .returning();
 
+      // ENTERPRISE: Invalidate cached auth for this user so permission changes take effect immediately
+      if (targetUser.uid) {
+        invalidateUserCache(targetUser.uid);
+      }
+
       res.json(updatedUser[0]);
     } catch (error: any) {
       console.error("Update permissions error:", error);
@@ -571,63 +652,76 @@ app.use(express.json({ limit: '10mb' }));
       const u = req.dbUser;
       if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
 
-      const allInvoices = await db.query.invoices.findMany({
-        where: eq(invoices.orgId, u.orgId),
-        with: { customer: true },
-        orderBy: [desc(invoices.createdAt)]
-      });
-      
-      const allCustomers = await db.query.customers.findMany({
-        where: eq(customers.orgId, u.orgId)
-      });
+      const orgId = u.orgId;
 
-      const today = new Date();
-      today.setHours(0,0,0,0);
+      // ENTERPRISE: Use SQL aggregation instead of loading all invoices into memory
+      // Today's revenue and count (returns 1 row, not thousands)
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
-      const todayInvoices = allInvoices.filter(i => new Date(i.date || i.createdAt) >= today);
-      const todaysRevenue = todayInvoices.reduce((sum, inv) => sum + Number(inv.grandTotal || 0), 0);
-      
-      const last7Days = Array.from({length: 7}).map((_, i) => {
+      const todayStats = await pool.query(
+        `SELECT COUNT(*)::int as count, COALESCE(SUM(grand_total::numeric), 0)::float as revenue
+         FROM invoices WHERE org_id = $1 AND date >= $2`,
+        [orgId, todayStart]
+      );
+
+      const todaysRevenue = todayStats.rows[0]?.revenue || 0;
+      const billsGenerated = todayStats.rows[0]?.count || 0;
+
+      // Total customers (1 row)
+      const customerCount = await pool.query(
+        `SELECT COUNT(*)::int as total FROM customers WHERE org_id = $1`,
+        [orgId]
+      );
+      const totalCustomers = customerCount.rows[0]?.total || 0;
+
+      // 7-day chart data (max 7 rows returned, not thousands)
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+
+      const chartResult = await pool.query(
+        `SELECT DATE(date) as day, COALESCE(SUM(grand_total::numeric), 0)::float as total
+         FROM invoices WHERE org_id = $1 AND date >= $2
+         GROUP BY DATE(date) ORDER BY day`,
+        [orgId, sevenDaysAgo]
+      );
+
+      // Fill in missing days with 0
+      const chartMap = new Map(chartResult.rows.map((r: any) => [r.day.toISOString().slice(0, 10), r.total]));
+      const chartData = Array.from({ length: 7 }).map((_, i) => {
         const d = new Date();
         d.setDate(d.getDate() - (6 - i));
-        return d;
-      });
-
-      const chartData = last7Days.map(date => {
-        const dayStart = new Date(date);
-        dayStart.setHours(0,0,0,0);
-        const dayEnd = new Date(date);
-        dayEnd.setHours(23,59,59,999);
-        
-        const dayInvoices = allInvoices.filter(i => {
-          const cd = new Date(i.date || i.createdAt);
-          return cd >= dayStart && cd <= dayEnd;
-        });
-        
-        const total = dayInvoices.reduce((sum, inv) => sum + Number(inv.grandTotal || 0), 0);
-        
+        const key = d.toISOString().slice(0, 10);
         return {
-          name: date.toLocaleDateString('en-US', { weekday: 'short' }),
-          total
+          name: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          total: chartMap.get(key) || 0
         };
       });
 
-      const recentActivity = allInvoices.slice(0, 5).map(inv => ({
+      // Recent activity (only 5 rows, with a LIMIT)
+      const recentInvoices = await db.query.invoices.findMany({
+        where: eq(invoices.orgId, orgId),
+        with: { customer: true },
+        orderBy: [desc(invoices.createdAt)],
+        limit: 5
+      });
+
+      const recentActivity = recentInvoices.map(inv => ({
         type: 'success',
-        title: `Invoice ${inv.invoiceNumber} created for ${inv.customer?.name || 'Unknown'}`,
+        title: `Invoice ${inv.invoiceNumber} created for ${(inv as any).customer?.name || 'Unknown'}`,
         time: new Date(inv.createdAt).toLocaleString()
       }));
 
       res.json({
         todaysRevenue,
-        billsGenerated: todayInvoices.length,
-        totalCustomers: allCustomers.length,
+        billsGenerated,
+        totalCustomers,
         chartData,
         recentActivity
       });
-    } catch (error) {
-      console.error(error);
-      
+    } catch (error: any) {
+      console.error("Dashboard error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -637,18 +731,24 @@ app.use(express.json({ limit: '10mb' }));
       const u = req.dbUser;
       if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
 
+      // ENTERPRISE: Support pagination with ?page=1&limit=50
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 200));
+      const offset = (page - 1) * limit;
+
       const orgInvoices = await db.query.invoices.findMany({
         where: eq(invoices.orgId, u.orgId),
         with: {
           customer: true,
           items: true
         },
-        orderBy: [desc(invoices.createdAt)]
+        orderBy: [desc(invoices.createdAt)],
+        limit: limit,
+        offset: offset
       });
       res.json(orgInvoices);
-    } catch (error) {
-      console.error(error);
-      
+    } catch (error: any) {
+      console.error("Invoices list error:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -695,18 +795,20 @@ app.use(express.json({ limit: '10mb' }));
 
       const { customerName, phone, address, invoiceNumber, date, subtotal, discount, taxAmount, grandTotal, notes, items, status, paymentMethod, paymentReference } = req.body;
 
-      // 1. Find or create customer
+      // 1. Find or create customer — ENTERPRISE: Use DB query, not full table scan
       let customerId = null;
       if (customerName) {
-        const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
-        const customer = existingCustomers.find(c => c.name.toLowerCase() === String(customerName).trim().toLowerCase());
+        const trimmedName = String(customerName).trim();
+        const existingCustomers = await db.select().from(customers)
+          .where(and(eq(customers.orgId, u.orgId), ilike(customers.name, trimmedName)))
+          .limit(1);
         
-        if (customer) {
-          customerId = customer.id;
+        if (existingCustomers.length > 0) {
+          customerId = existingCustomers[0].id;
         } else {
           const newCustomer = await db.insert(customers).values({
             orgId: u.orgId,
-            name: String(customerName).trim(),
+            name: trimmedName,
             phone: phone ? String(phone).trim() : null,
             address: address ? String(address).trim() : null,
           }).returning();
@@ -780,14 +882,16 @@ app.use(express.json({ limit: '10mb' }));
       if (targetInvoices.length === 0) {
         let customerId = null;
         if (customerName) {
-          const existingCustomers = await db.select().from(customers).where(eq(customers.orgId, u.orgId));
-          const customer = existingCustomers.find(c => c.name.toLowerCase() === String(customerName).trim().toLowerCase());
-          if (customer) {
-            customerId = customer.id;
+          const trimmedName = String(customerName).trim();
+          const existingCustomers = await db.select().from(customers)
+            .where(and(eq(customers.orgId, u.orgId), ilike(customers.name, trimmedName)))
+            .limit(1);
+          if (existingCustomers.length > 0) {
+            customerId = existingCustomers[0].id;
           } else {
             const newCustomer = await db.insert(customers).values({
               orgId: u.orgId,
-              name: String(customerName).trim(),
+              name: trimmedName,
               phone: phone ? String(phone).trim() : null,
               address: address ? String(address).trim() : null,
             }).returning();
