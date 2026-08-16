@@ -54,6 +54,9 @@ public interface BillCraftApiService {
     @GET("api/settings")
     Call<CompanySettings> getSettings();
 
+    @PUT("api/settings")
+    Call<CompanySettings> updateSettings(@Body CompanySettings settings);
+
     @Multipart
     @POST("api/extract")
     Call<Invoice> extractMultiPageBill(@Part List<MultipartBody.Part> files);

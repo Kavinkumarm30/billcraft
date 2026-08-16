@@ -105,6 +105,10 @@ public class DashboardActivity extends AppCompatActivity {
             startActivity(new Intent(DashboardActivity.this, CustomersActivity.class));
         });
 
+        findViewById(R.id.navSettings).setOnClickListener(v -> {
+            startActivity(new Intent(DashboardActivity.this, SettingsActivity.class));
+        });
+
         findViewById(R.id.btnUpgradePro).setOnClickListener(v -> {
             Toast.makeText(this, "Opening Pro Plan upgrade...", Toast.LENGTH_SHORT).show();
         });
