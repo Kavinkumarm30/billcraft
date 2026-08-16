@@ -1,6 +1,8 @@
 package com.billcraft.studio.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -22,6 +24,7 @@ public class InvoicesListActivity extends AppCompatActivity {
 
     private SwipeRefreshLayout swipeRefresh;
     private InvoicesAdapter adapter;
+    private View layoutEmptyInvoices;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,11 +32,22 @@ public class InvoicesListActivity extends AppCompatActivity {
         setContentView(R.layout.activity_invoices_list);
 
         swipeRefresh = findViewById(R.id.swipeRefreshInvoices);
+        layoutEmptyInvoices = findViewById(R.id.layoutEmptyInvoices);
         RecyclerView rvInvoices = findViewById(R.id.rvInvoicesList);
         rvInvoices.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new InvoicesAdapter();
         rvInvoices.setAdapter(adapter);
+
+        findViewById(R.id.btnBackInvoices).setOnClickListener(v -> finish());
+
+        findViewById(R.id.btnCreateInvoiceFromList).setOnClickListener(v -> {
+            startActivity(new Intent(InvoicesListActivity.this, MultiPageCameraActivity.class));
+        });
+
+        findViewById(R.id.btnEmptyCreate).setOnClickListener(v -> {
+            startActivity(new Intent(InvoicesListActivity.this, MultiPageCameraActivity.class));
+        });
 
         swipeRefresh.setOnRefreshListener(this::loadInvoices);
         loadInvoices();
@@ -46,17 +60,29 @@ public class InvoicesListActivity extends AppCompatActivity {
             public void onResponse(Call<List<Invoice>> call, Response<List<Invoice>> response) {
                 swipeRefresh.setRefreshing(false);
                 if (response.isSuccessful() && response.body() != null) {
-                    adapter.setInvoices(response.body());
+                    List<Invoice> list = response.body();
+                    adapter.setInvoices(list);
+                    if (list.isEmpty()) {
+                        layoutEmptyInvoices.setVisibility(View.VISIBLE);
+                    } else {
+                        layoutEmptyInvoices.setVisibility(View.GONE);
+                    }
                 } else {
-                    Toast.makeText(InvoicesListActivity.this, "Failed to load invoices", Toast.LENGTH_SHORT).show();
+                    layoutEmptyInvoices.setVisibility(View.VISIBLE);
                 }
             }
 
             @Override
             public void onFailure(Call<List<Invoice>> call, Throwable t) {
                 swipeRefresh.setRefreshing(false);
-                Toast.makeText(InvoicesListActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                layoutEmptyInvoices.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadInvoices();
     }
 }

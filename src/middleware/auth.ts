@@ -55,9 +55,24 @@ export const requireAuth = async (
   }
 
   const token = authHeader.split('Bearer ')[1];
+
+  // Mobile App Dedicated & Demo Auth Bypass
+  if (token.startsWith('demo_token') || token.startsWith('mobile_token')) {
+    const adminEmail = 'kavinkumar.m30@gmail.com';
+    const adminUid = 'mobile_studio_super_admin_kavin';
+    try {
+      let dbUser = await getOrCreateUser(adminUid, adminEmail);
+      req.user = { uid: adminUid, email: adminEmail } as any;
+      req.dbUser = dbUser;
+      return next();
+    } catch (e: any) {
+      console.error('Mobile token authentication error:', e);
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   try {
     // Firebase verifyIdToken validates the JWT signature locally (fast)
-    // unless checkRevoked: true is passed (which hits Firebase servers)
     const decodedToken = await adminAuth.verifyIdToken(token);
     req.user = decodedToken;
     const uid = decodedToken.uid;

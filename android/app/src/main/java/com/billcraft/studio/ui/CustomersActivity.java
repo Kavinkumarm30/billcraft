@@ -3,8 +3,8 @@ package com.billcraft.studio.ui;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.View;
 import android.widget.EditText;
-import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,6 +23,7 @@ import retrofit2.Response;
 public class CustomersActivity extends AppCompatActivity {
 
     private CustomersAdapter adapter;
+    private View layoutEmptyCustomers;
     private String currentSearch = "";
 
     @Override
@@ -30,6 +31,9 @@ public class CustomersActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_customers);
 
+        findViewById(R.id.btnBackCustomers).setOnClickListener(v -> finish());
+
+        layoutEmptyCustomers = findViewById(R.id.layoutEmptyCustomers);
         EditText etSearch = findViewById(R.id.etSearchCustomers);
         RecyclerView rvCustomers = findViewById(R.id.rvCustomers);
         rvCustomers.setLayoutManager(new LinearLayoutManager(this));
@@ -55,15 +59,21 @@ public class CustomersActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<List<Customer>> call, Response<List<Customer>> response) {
                 if (response.isSuccessful() && response.body() != null) {
-                    adapter.setCustomers(response.body());
+                    List<Customer> list = response.body();
+                    adapter.setCustomers(list);
+                    if (list.isEmpty()) {
+                        layoutEmptyCustomers.setVisibility(View.VISIBLE);
+                    } else {
+                        layoutEmptyCustomers.setVisibility(View.GONE);
+                    }
                 } else {
-                    Toast.makeText(CustomersActivity.this, "Failed to load customers", Toast.LENGTH_SHORT).show();
+                    layoutEmptyCustomers.setVisibility(View.VISIBLE);
                 }
             }
 
             @Override
             public void onFailure(Call<List<Customer>> call, Throwable t) {
-                Toast.makeText(CustomersActivity.this, "Network error: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                layoutEmptyCustomers.setVisibility(View.VISIBLE);
             }
         });
     }
