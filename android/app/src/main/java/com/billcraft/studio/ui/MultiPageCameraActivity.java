@@ -1,14 +1,18 @@
 package com.billcraft.studio.ui;
 
 import android.Manifest;
+import android.content.ClipData;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.CameraSelector;
@@ -29,6 +33,8 @@ import com.billcraft.studio.ui.adapters.PageThumbnailsAdapter;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -56,15 +62,21 @@ public class MultiPageCameraActivity extends AppCompatActivity {
     private Button btnDoneExtract;
     private PageThumbnailsAdapter thumbnailsAdapter;
 
+    private ActivityResultLauncher<Intent> galleryLauncher;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
+        outputDirectory = getOutputDirectory();
+        cameraExecutor = Executors.newSingleThreadExecutor();
+
         viewFinder = findViewById(R.id.viewFinder);
         tvPagesCount = findViewById(R.id.tvPagesCount);
         btnDoneExtract = findViewById(R.id.btnDoneExtract);
         ImageButton btnShutter = findViewById(R.id.btnShutter);
+        View btnPickGallery = findViewById(R.id.btnPickGallery);
         findViewById(R.id.btnCloseCamera).setOnClickListener(v -> finish());
 
         RecyclerView rvThumbnails = findViewById(R.id.rvThumbnails);
@@ -76,6 +88,29 @@ public class MultiPageCameraActivity extends AppCompatActivity {
         });
         rvThumbnails.setAdapter(thumbnailsAdapter);
 
+        // Register gallery picker
+        galleryLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    Intent data = result.getData();
+                    if (data.getClipData() != null) {
+                        ClipData clipData = data.getClipData();
+                        for (int i = 0; i < clipData.getItemCount(); i++) {
+                            Uri uri = clipData.getItemAt(i).getUri();
+                            File file = saveUriToFile(uri, "gallery_bill_" + i + "_" + System.currentTimeMillis() + ".jpg");
+                            if (file != null) thumbnailsAdapter.addPage(file);
+                        }
+                    } else if (data.getData() != null) {
+                        Uri uri = data.getData();
+                        File file = saveUriToFile(uri, "gallery_bill_" + System.currentTimeMillis() + ".jpg");
+                        if (file != null) thumbnailsAdapter.addPage(file);
+                    }
+                    updatePageCount();
+                }
+            }
+        );
+
         if (allPermissionsGranted()) {
             startCamera();
         } else {
@@ -83,10 +118,41 @@ public class MultiPageCameraActivity extends AppCompatActivity {
         }
 
         btnShutter.setOnClickListener(v -> takePhoto());
+        btnPickGallery.setOnClickListener(v -> openGalleryPicker());
         btnDoneExtract.setOnClickListener(v -> submitForOcrExtraction());
 
-        outputDirectory = getOutputDirectory();
-        cameraExecutor = Executors.newSingleThreadExecutor();
+        // If intent specifies to launch gallery directly
+        if (getIntent().getBooleanExtra("launch_gallery", false)) {
+            openGalleryPicker();
+        }
+    }
+
+    private void openGalleryPicker() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        galleryLauncher.launch(Intent.createChooser(intent, "Select Bill Photo(s)"));
+    }
+
+    private File saveUriToFile(Uri uri, String filename) {
+        try {
+            InputStream inputStream = getContentResolver().openInputStream(uri);
+            if (inputStream == null) return null;
+            File file = new File(outputDirectory, filename);
+            FileOutputStream outputStream = new FileOutputStream(file);
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+            outputStream.close();
+            inputStream.close();
+            return file;
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to load image: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return null;
+        }
     }
 
     private void takePhoto() {
@@ -121,10 +187,10 @@ public class MultiPageCameraActivity extends AppCompatActivity {
     private void updatePageCount() {
         int count = thumbnailsAdapter.getItemCount();
         if (count == 0) {
-            tvPagesCount.setText("Page 1 (Snap consecutive pages)");
+            tvPagesCount.setText("Page 1 (Snap or Upload Bill)");
             btnDoneExtract.setVisibility(View.GONE);
         } else {
-            tvPagesCount.setText(count + " page(s) captured - Ready for AI OCR");
+            tvPagesCount.setText(count + " page(s) selected - Ready for AI OCR");
             btnDoneExtract.setVisibility(View.VISIBLE);
         }
     }
@@ -132,11 +198,11 @@ public class MultiPageCameraActivity extends AppCompatActivity {
     private void submitForOcrExtraction() {
         List<File> pages = thumbnailsAdapter.getPageFiles();
         if (pages.isEmpty()) {
-            Toast.makeText(this, "Please snap at least one page", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please snap or upload at least one page", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        Toast.makeText(this, "Uploading " + pages.size() + " page(s) to Gemini AI...", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Extracting " + pages.size() + " page(s) with Gemini AI...", Toast.LENGTH_LONG).show();
 
         List<MultipartBody.Part> parts = new ArrayList<>();
         for (File page : pages) {
@@ -207,8 +273,7 @@ public class MultiPageCameraActivity extends AppCompatActivity {
             if (allPermissionsGranted()) {
                 startCamera();
             } else {
-                Toast.makeText(this, "Camera permissions required for bill capture.", Toast.LENGTH_SHORT).show();
-                finish();
+                Toast.makeText(this, "Camera permission optional. You can still use Upload from Gallery.", Toast.LENGTH_SHORT).show();
             }
         }
     }

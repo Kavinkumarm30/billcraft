@@ -89,6 +89,12 @@ public class DashboardActivity extends AppCompatActivity {
             startActivity(new Intent(DashboardActivity.this, MultiPageCameraActivity.class));
         });
 
+        findViewById(R.id.btnUploadBill).setOnClickListener(v -> {
+            Intent intent = new Intent(DashboardActivity.this, MultiPageCameraActivity.class);
+            intent.putExtra("launch_gallery", true);
+            startActivity(intent);
+        });
+
         findViewById(R.id.navCreate).setOnClickListener(v -> {
             startActivity(new Intent(DashboardActivity.this, MultiPageCameraActivity.class));
         });
