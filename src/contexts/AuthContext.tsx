@@ -99,7 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
             setDbUser(null);
             sessionStorage.removeItem('billcraft_cached_dbuser');
-            toast.error("Your access has been revoked by the administrator.");
+            toast.error("Your access is currently inactive. Please contact the owner at +91 9361654668.");
+            if (window.location.pathname !== '/access-revoked') {
+              window.location.href = '/access-revoked';
+            }
+            return;
           } else if (data) {
             setDbUser(data);
           } else {
@@ -146,7 +150,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(res.user);
         const token = await res.user.getIdToken();
         const data = await fetchDbUserWithRetry(token, 2);
-        if (data && !data.revoked) {
+        if (data && data.revoked) {
+          await signOut(auth);
+          setUser(null);
+          setDbUser(null);
+          sessionStorage.removeItem('billcraft_cached_dbuser');
+          window.location.href = '/access-revoked';
+          return;
+        } else if (data) {
           setDbUser(data);
         } else {
           const fallback = {

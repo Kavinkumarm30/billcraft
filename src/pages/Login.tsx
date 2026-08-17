@@ -84,6 +84,13 @@ export default function Login() {
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
               <span>Secure SSL Encrypted Session</span>
             </div>
+
+            <div className="pt-2 border-t border-gray-100 text-center text-[11px] text-gray-500">
+              <span>Need access or account activation? </span>
+              <a href="/contact-owner" className="font-bold text-gray-900 underline hover:text-purple-600">
+                Contact Owner
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>

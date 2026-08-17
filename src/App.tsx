@@ -19,6 +19,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Payment = lazy(() => import('./pages/Payment'));
+const AccessRevoked = lazy(() => import('./pages/AccessRevoked'));
 
 // A simple protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,9 @@ export default function App() {
       <Suspense fallback={<LoadingScreen message="Loading page..." />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/access-revoked" element={<AccessRevoked />} />
+          <Route path="/access-suspended" element={<AccessRevoked />} />
+          <Route path="/contact-owner" element={<AccessRevoked />} />
           
           <Route path="/" element={<Landing />} />
           
