@@ -34,28 +34,31 @@ export const CustomMonishaLayout: React.FC<CustomMonishaLayoutProps> = ({ data, 
   const words = numberToWords(grandTotal);
 
   return (
-    <div className="bg-white p-0 m-0 w-full relative min-h-[1130px] font-sans border-[3px] border-[#e25704] text-black shadow-sm flex flex-col justify-between select-text">
+    <div 
+      style={{ width: '780px', minWidth: '780px' }}
+      className="bg-white p-0 m-0 relative min-h-[1130px] font-sans border-[3px] border-[#e25704] text-black shadow-sm flex flex-col justify-between select-text shrink-0"
+    >
       <div>
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Monisha Geometric M Logo */}
             <div className="flex shrink-0">
-              <svg width="68" height="68" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                 {/* Left Black Triangle */}
                 <path d="M48 8 L18 82 L34 82 L48 44 L62 82 L78 82 Z" fill="#000000" />
                 {/* Right Overlapping Orange Triangle */}
                 <path d="M34 8 L4 82 L20 82 L34 44 L48 82 L64 82 Z" fill="#e25704" opacity="0.95" />
               </svg>
             </div>
-            <div>
-              <h1 className="text-[2.6rem] font-black tracking-tight leading-none">
+            <div className="shrink-0">
+              <h1 className="text-[2.2rem] font-black tracking-tight leading-none whitespace-nowrap">
                 <span className="text-[#e25704]">Monisha</span> <span className="text-black">Interiors</span>
               </h1>
             </div>
           </div>
-          <div className="text-right">
-            <h2 className="text-[2.8rem] italic font-black text-red-600 tracking-wider m-0 p-0 leading-none">
+          <div className="text-right shrink-0">
+            <h2 className="text-[2.4rem] italic font-black text-red-600 tracking-wider m-0 p-0 leading-none whitespace-nowrap">
               INVOICE
             </h2>
           </div>

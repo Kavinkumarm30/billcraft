@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '../components/ui/button';
-import { Printer, Download, Save, ArrowLeft, Building2, Share2, CheckCircle, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { Printer, Download, Save, ArrowLeft, Building2, Share2, CheckCircle, Image as ImageIcon, CheckCircle2, Minimize2, Maximize2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CustomMonishaLayout } from '../pages/CustomMonishaLayout';
 import { toast } from 'sonner';
@@ -57,6 +57,7 @@ export default function InvoicePreview() {
   };
 
   const [scale, setScale] = useState(1);
+  const [zoomMode, setZoomMode] = useState<'fit' | 'actual'>('fit');
   const containerRef = useRef<HTMLDivElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
@@ -90,8 +91,14 @@ export default function InvoicePreview() {
       if (containerRef.current) {
         const containerWidth = containerRef.current.clientWidth;
         const invoiceWidth = 800; // Fixed width of the invoice
-        if (containerWidth < invoiceWidth) {
-          setScale(containerWidth / invoiceWidth);
+        if (zoomMode === 'fit') {
+          const padding = window.innerWidth < 640 ? 16 : 48;
+          const availableWidth = containerWidth - padding;
+          if (availableWidth < invoiceWidth) {
+            setScale(Math.max(0.32, availableWidth / invoiceWidth));
+          } else {
+            setScale(1);
+          }
         } else {
           setScale(1);
         }
@@ -99,9 +106,13 @@ export default function InvoicePreview() {
     };
 
     updateScale();
+    const timer = setTimeout(updateScale, 60);
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, [data]);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [data, zoomMode]);
 
   const handleShare = async () => {
     if (!invoiceRef.current) return;
@@ -351,27 +362,51 @@ export default function InvoicePreview() {
       {/* Invoice Document Wrapper */}
       <div 
         ref={containerRef}
-        className="w-full overflow-hidden bg-white/40 backdrop-blur-sm p-0 sm:p-6 print:p-0 print:bg-transparent rounded-2xl print:overflow-visible print:block border border-white/60 shadow-sm"
+        className="w-full overflow-x-auto overflow-y-hidden bg-white/40 backdrop-blur-sm p-2 sm:p-6 print:p-0 print:bg-transparent rounded-2xl print:overflow-visible print:block border border-white/60 shadow-sm flex flex-col items-center"
       >
+        {/* Mobile View Toggle Bar */}
+        <div className="flex sm:hidden items-center justify-between w-full max-w-[800px] mb-3 px-1 text-xs">
+          <span className="text-gray-500 font-medium">Scale: {Math.round(scale * 100)}%</span>
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+            <button
+              type="button"
+              onClick={() => setZoomMode('fit')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${
+                zoomMode === 'fit' ? 'bg-white text-blue-600 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Minimize2 className="w-3 h-3" /> Fit
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoomMode('actual')}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 ${
+                zoomMode === 'actual' ? 'bg-white text-blue-600 shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Maximize2 className="w-3 h-3" /> 100%
+            </button>
+          </div>
+        </div>
+
         <div 
           style={{ 
             transform: `scale(${scale})`, 
-            transformOrigin: 'top left',
-            marginBottom: scale < 1 ? `-${(canvaDesign.canvasHeight || 1050) * (1 - scale)}px` : '0',
+            transformOrigin: 'top center',
+            marginBottom: scale < 1 ? `-${Math.round((isCustomMonisha ? 1150 : (canvaDesign.canvasHeight || 1050)) * (1 - scale))}px` : '0',
             width: '800px',
-            marginLeft: scale < 1 ? `calc(50% - ${800 * scale / 2}px)` : 'auto',
-            marginRight: scale < 1 ? '0' : 'auto'
+            minWidth: '800px',
           }}
-          className="print:!transform-none print:!mb-0 print:!w-full print:!m-0 print-override"
+          className="print:!transform-none print:!mb-0 print:!w-full print:!m-0 print-override transition-transform duration-150 ease-out shrink-0"
         >
           <div 
             ref={invoiceRef}
             style={{
               width: '800px',
-              minHeight: `${canvaDesign.canvasHeight || 1050}px`,
-              backgroundColor: canvaDesign.canvasBg || '#ffffff'
+              minHeight: isCustomMonisha ? '1130px' : `${canvaDesign.canvasHeight || 1050}px`,
+              backgroundColor: isCustomMonisha ? '#ffffff' : (canvaDesign.canvasBg || '#ffffff')
             }}
-            className={`relative bg-white shadow-sm border border-gray-200 print:border-none print:shadow-none print:p-0 print:m-0 ${
+            className={`relative bg-white shadow-xl rounded-xl border border-gray-200 print:border-none print:shadow-none print:p-0 print:m-0 overflow-hidden ${
               canvaDesign.fontFamily === 'serif' ? 'font-serif' : 
               canvaDesign.fontFamily === 'mono' ? 'font-mono' : 'font-sans'
             }`}
