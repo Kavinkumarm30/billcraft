@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, AlertTriangle, Sparkles, ShieldCheck } from 'lucide-react';
+import { ArrowRight, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { toast } from 'sonner';
 
 export default function Login() {
-  const { login, loginDemo, user } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -42,22 +42,6 @@ export default function Login() {
     }
   };
 
-  const handleQuickAccess = async () => {
-    if (loading) return;
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      await loginDemo();
-      toast.success('Welcome back, Studio Owner!');
-      navigate('/dashboard', { replace: true });
-    } catch (error: any) {
-      console.error("Quick Login Error:", error);
-      toast.error('Failed to log in via Quick Access.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-r from-[#9b9b9b] to-[#f5f5f5] flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -76,7 +60,7 @@ export default function Login() {
               Sign in to your organization account to continue
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3.5 pt-0">
+          <CardContent className="space-y-4 pt-0">
             {errorMessage && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 text-xs">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -96,27 +80,7 @@ export default function Login() {
               {!loading && <ArrowRight className="h-4 w-4" />}
             </Button>
 
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-400 font-medium">Or</span>
-              </div>
-            </div>
-
-            <Button 
-              type="button"
-              variant="outline"
-              className="w-full h-11 text-xs font-bold border-gray-200 bg-gray-50/70 hover:bg-gray-100 text-gray-900 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2" 
-              onClick={() => handleQuickAccess()}
-              disabled={loading}
-            >
-              <Sparkles className="h-4 w-4 text-amber-600" />
-              <span>⚡ Quick Studio Owner Access</span>
-            </Button>
-
-            <div className="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-gray-400">
+            <div className="flex items-center justify-center gap-1.5 pt-2 text-[11px] text-gray-400">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
               <span>Secure SSL Encrypted Session</span>
             </div>
