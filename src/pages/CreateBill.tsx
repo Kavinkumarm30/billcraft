@@ -12,6 +12,7 @@ export default function CreateBill() {
   const [previews, setPreviews] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +30,7 @@ export default function CreateBill() {
   };
 
   const processFiles = (newFiles: File[]) => {
+    setExtractionError(null);
     const validImageFiles: File[] = [];
     const validPreviews: string[] = [];
 
@@ -94,6 +96,7 @@ export default function CreateBill() {
 
     try {
       setIsExtracting(true);
+      setExtractionError(null);
       const token = await getToken();
       
       const formData = new FormData();
@@ -130,10 +133,35 @@ export default function CreateBill() {
       
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || 'Failed to extract data from bill images. Please try again.');
+      const msg = error.message || 'Failed to extract data from bill images.';
+      setExtractionError(msg);
+      toast.error(msg);
     } finally {
       setIsExtracting(false);
     }
+  };
+
+  const handleContinueWithManual = () => {
+    const prefilledData = {
+      customerName: 'Customer',
+      phone: '',
+      address: '',
+      invoiceNumber: 'INV-' + Date.now().toString().slice(-6),
+      date: new Date().toISOString().split('T')[0],
+      items: [
+        { description: 'Item 1', quantity: 1, rate: 0, amount: 0 }
+      ],
+      subtotal: 0,
+      discount: 0,
+      taxAmount: 0,
+      grandTotal: 0,
+      notes: '',
+      status: 'PENDING'
+    };
+    sessionStorage.setItem('extractedBillData', JSON.stringify(prefilledData));
+    sessionStorage.setItem('billImagePreviews', JSON.stringify(previews));
+    sessionStorage.setItem('billImagePreview', previews[0] || '');
+    navigate('/bills/review');
   };
 
   const handleManualCreate = () => {
@@ -380,32 +408,62 @@ export default function CreateBill() {
                 </label>
               </div>
 
-              {/* Bottom Multi-Page Extraction Action */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-100">
-                <p className="text-xs text-gray-500 font-medium text-center sm:text-left">
-                  ✨ Gemini AI will combine line items across all <strong className="text-gray-900">{files.length} page(s)</strong> into one unified invoice.
-                </p>
+                {/* Error Banner with 1-click fallback & settings link */}
+                {extractionError && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-900">
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-sm text-amber-800">AI Extraction Notice</p>
+                      <span className="text-[10px] bg-amber-200/60 text-amber-900 px-2 py-0.5 rounded font-semibold">Action Required</span>
+                    </div>
+                    <p className="text-amber-700 leading-relaxed">{extractionError}</p>
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => navigate('/settings')} 
+                        className="h-8 text-xs font-bold border-amber-300 text-amber-900 hover:bg-amber-100 bg-white"
+                      >
+                        ⚙️ Configure API Key in Settings
+                      </Button>
+                      <Button 
+                        type="button" 
+                        size="sm" 
+                        onClick={handleContinueWithManual} 
+                        className="h-8 text-xs font-bold bg-black text-white hover:bg-gray-800"
+                      >
+                        ✍️ Proceed with Manual Entry & Review
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-                <Button 
-                  onClick={handleExtract} 
-                  disabled={isExtracting}
-                  className="w-full sm:w-auto h-11 px-8 bg-black hover:bg-gray-800 text-white font-bold text-xs shadow-md transition-transform active:scale-95 rounded-xl"
-                >
-                  {isExtracting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Extracting {files.length} {files.length === 1 ? 'Page' : 'Pages'} with AI...
-                    </>
-                  ) : (
-                    <>
-                      Extract {files.length} {files.length === 1 ? 'Page' : 'Pages'} with AI
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+                {/* Bottom Multi-Page Extraction Action */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 font-medium text-center sm:text-left">
+                    ✨ Gemini AI will combine line items across all <strong className="text-gray-900">{files.length} page(s)</strong> into one unified invoice.
+                  </p>
+
+                  <Button 
+                    onClick={handleExtract} 
+                    disabled={isExtracting}
+                    className="w-full sm:w-auto h-11 px-8 bg-black hover:bg-gray-800 text-white font-bold text-xs shadow-md transition-transform active:scale-95 rounded-xl"
+                  >
+                    {isExtracting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Extracting {files.length} {files.length === 1 ? 'Page' : 'Pages'} with AI...
+                      </>
+                    ) : (
+                      <>
+                        Extract {files.length} {files.length === 1 ? 'Page' : 'Pages'} with AI
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </CardContent>
       </Card>
 

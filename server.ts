@@ -475,7 +475,7 @@ app.use(express.json({ limit: '10mb' }));
         responseMimeType: "application/json",
       };
 
-      const modelChain = ["gemini-3.6-flash", "gemini-3-flash-preview", "gemini-flash-latest"];
+      const modelChain = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
       let response;
       let lastError;
 
@@ -497,6 +497,12 @@ app.use(express.json({ limit: '10mb' }));
       }
 
       if (!response || !response.text) {
+        const errorMsg = lastError?.message || "Failed to extract bill data from AI model";
+        if (errorMsg.includes("API key not valid") || errorMsg.includes("API_KEY_INVALID")) {
+          return res.status(400).json({ 
+            error: "Gemini API key is invalid or expired. Please update your Gemini API key in Settings or Admin Panel." 
+          });
+        }
         throw lastError || new Error("Failed to extract bill data from AI model");
       }
       
@@ -513,7 +519,8 @@ app.use(express.json({ limit: '10mb' }));
       
     } catch (error: any) {
       console.error("Multi-page extraction error:", error);
-      res.status(500).json({ error: error.message || "Failed to extract data" });
+      const msg = error.message || "Failed to extract data";
+      res.status(500).json({ error: msg });
     }
   });
 

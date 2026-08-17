@@ -25,12 +25,13 @@ export default function Login() {
   }
 
   const handleLogin = async () => {
+    if (loading) return;
     try {
       setLoading(true);
       setErrorMessage(null);
       await login();
+      toast.success('Signed in successfully');
       navigate('/dashboard', { replace: true });
-      toast.success('Logged in successfully');
     } catch (error: any) {
       console.error("Login Error:", error);
       const msg = error.message || 'Failed to log in. Please try again.';
@@ -42,12 +43,13 @@ export default function Login() {
   };
 
   const handleQuickAccess = async () => {
+    if (loading) return;
     try {
       setLoading(true);
       setErrorMessage(null);
       await loginDemo();
-      navigate('/dashboard', { replace: true });
       toast.success('Welcome back, Studio Owner!');
+      navigate('/dashboard', { replace: true });
     } catch (error: any) {
       console.error("Quick Login Error:", error);
       toast.error('Failed to log in via Quick Access.');

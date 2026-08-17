@@ -268,15 +268,23 @@ export default function InvoicePreview() {
     }
   };
 
+  const [activeLayoutId, setActiveLayoutId] = useState<string>('orange-classic');
+
+  useEffect(() => {
+    if (settings?.invoiceLayout) {
+      setActiveLayoutId(settings.invoiceLayout);
+    }
+  }, [settings]);
+
   if (!data) return null;
 
   // Parse user's layout config
   let canvaDesign: InvoiceLayoutDesign = defaultInvoiceDesign;
-  const rawLayout = settings?.invoiceLayout || 'standard';
+  const currentLayout = activeLayoutId || settings?.invoiceLayout || 'orange-classic';
 
-  if (rawLayout.startsWith('{')) {
+  if (currentLayout.startsWith('{')) {
     try {
-      const parsed = JSON.parse(rawLayout);
+      const parsed = JSON.parse(currentLayout);
       if (parsed.elements && Array.isArray(parsed.elements)) {
         canvaDesign = parsed;
       }
@@ -285,7 +293,7 @@ export default function InvoicePreview() {
     }
   }
 
-  const isCustomMonisha = rawLayout === 'orange-classic';
+  const isCustomMonisha = currentLayout === 'orange-classic' || currentLayout === 'monisha-interiors';
 
   return (
     <div className="p-3 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-4 sm:space-y-6 print:p-0 print:m-0 print:space-y-0 pb-20 md:pb-8">
@@ -301,7 +309,25 @@ export default function InvoicePreview() {
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" /> Back to Edit
         </Button>
+
+        {/* Layout Switcher & Actions */}
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          {/* Quick Layout Dropdown */}
+          <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200">
+            <span className="text-[11px] font-bold text-gray-500 pl-1.5 hidden md:inline">Layout:</span>
+            <select
+              value={activeLayoutId}
+              onChange={(e) => setActiveLayoutId(e.target.value)}
+              className="bg-white text-xs font-bold text-gray-900 rounded-md border border-gray-300 py-1 px-2 focus:outline-none focus:ring-1 focus:ring-black cursor-pointer"
+            >
+              <option value="orange-classic">⭐ Monisha Interiors (UPVC)</option>
+              <option value="standard">Standard Business</option>
+              <option value="modern">Modern (Logo Right)</option>
+              <option value="corporate">Corporate Dark</option>
+              <option value="classic">Classic Grid</option>
+            </select>
+          </div>
+
           <Button variant="outline" size="sm" onClick={executePrint} className="flex-1 sm:flex-none text-xs font-bold h-9">
             <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
           </Button>

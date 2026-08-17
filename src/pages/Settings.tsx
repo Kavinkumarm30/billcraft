@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../contexts/AuthContext';
+import { CustomMonishaLayout } from './CustomMonishaLayout';
 import { 
   Loader2, 
   LayoutTemplate, 
@@ -18,24 +19,57 @@ import {
   X,
   FileUp,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  KeyRound,
+  Sparkles
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog';
 
 // Predefined Prebuilt Standard Invoice Layouts
-export const predefinedLayouts = [
+export interface PredefinedLayout {
+  id: string;
+  name: string;
+  badge: string;
+  desc: string;
+  isFeatured?: boolean;
+  isCustom?: boolean;
+}
+
+export const predefinedLayouts: PredefinedLayout[] = [
+  { id: 'orange-classic', name: 'Monisha Interiors', badge: '⭐ Featured UPVC', desc: 'Exact warm orange boxed quotation layout with Sqft/- columns, total Sqft sum, Supervisor notes, and branch locations', isFeatured: true },
   { id: 'standard', name: 'Standard', badge: 'Logo Left', desc: 'Classic business invoice with company details on the left' },
   { id: 'modern', name: 'Modern', badge: 'Logo Right', desc: 'Contemporary layout with brand logo on the right side' },
   { id: 'minimal', name: 'Minimal', badge: 'Centered', desc: 'Clean centered typography with slim divider lines' },
   { id: 'professional', name: 'Professional', badge: 'Boxed', desc: 'Card containers for customer details and totals' },
   { id: 'bold', name: 'Bold', badge: 'Dark Accent', desc: 'Dark solid header with high contrast summary values' },
+  { id: 'corporate', name: 'Corporate', badge: 'Solid Header', desc: 'Formal executive layout designed for corporate billing' },
   { id: 'elegant', name: 'Elegant', badge: 'Serif & Soft', desc: 'Timeless serif fonts with soft rounded borders' },
   { id: 'tech', name: 'Tech', badge: 'Monospace', desc: 'Clean monospace typography for tech companies' },
-  { id: 'corporate', name: 'Corporate', badge: 'Solid Header', desc: 'Formal executive layout designed for corporate billing' },
   { id: 'playful', name: 'Playful', badge: 'Rounded', desc: 'Vibrant rounded cards with colorful badges' },
-  { id: 'orange-classic', name: 'Orange Classic', badge: 'Custom Monisha', desc: 'Exclusive warm orange boxed theme with highlighted totals card', isCustom: true },
   { id: 'classic', name: 'Classic', badge: 'Traditional', desc: 'Traditional paper invoice layout with standard grid' },
 ];
+
+const sampleMonishaData = {
+  customerName: 'Customer',
+  address: 'Rayapuram, Chennai.',
+  invoiceNumber: 'CH - 103',
+  date: '2026-07-12',
+  phone: '9740223462',
+  items: [
+    { description: 'Kitchen', quantity: 120, rate: 460, amount: 55200 },
+    { description: '*Glossy White', quantity: 110, rate: 460, amount: 50600 },
+    { description: '1st Bedroom', quantity: 100, rate: 460, amount: 46000 },
+    { description: '*Glossy White', quantity: 270, rate: 460, amount: 124200 },
+    { description: '2nd Bedroom', quantity: 76, rate: 460, amount: 34960 },
+    { description: '*Glossy White', quantity: 180, rate: 460, amount: 82800 }
+  ],
+  subtotal: 393760,
+  discount: 0,
+  taxAmount: 0,
+  grandTotal: 393760,
+  status: 'PENDING',
+  amountPaid: 0
+};
 
 export default function Settings() {
   const { getToken } = useAuth();
@@ -55,7 +89,8 @@ export default function Settings() {
   const [accountNo, setAccountNo] = useState('');
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
-  const [selectedLayoutId, setSelectedLayoutId] = useState('standard');
+  const [dedicatedApiKey, setDedicatedApiKey] = useState('');
+  const [selectedLayoutId, setSelectedLayoutId] = useState('orange-classic');
 
   // Preview Layout Modal state
   const [previewingLayout, setPreviewingLayout] = useState<any | null>(null);
@@ -103,6 +138,7 @@ export default function Settings() {
       setAccountNo(settings.accountNo || '');
       setIfsc(settings.ifsc || '');
       setUpiId(settings.upiId || '');
+      setDedicatedApiKey(settings.dedicatedApiKey || '');
 
       if (settings.invoiceLayout) {
         if (!settings.invoiceLayout.startsWith('{')) {
@@ -147,6 +183,7 @@ export default function Settings() {
       accountNo,
       ifsc,
       upiId,
+      dedicatedApiKey,
       invoiceLayout: layoutToSave || selectedLayoutId,
     };
     mutation.mutate(payload);
@@ -626,6 +663,27 @@ export default function Settings() {
                   />
                 </div>
 
+                {/* Dedicated Gemini AI API Key */}
+                <div className="space-y-2 sm:col-span-2 pt-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                      Google Gemini AI API Key (Optional Dedicated Key)
+                    </Label>
+                    <span className="text-[10px] text-gray-500 font-medium">For AI multi-page bill OCR extraction</span>
+                  </div>
+                  <Input 
+                    type="password"
+                    value={dedicatedApiKey} 
+                    onChange={(e) => setDedicatedApiKey(e.target.value)} 
+                    placeholder="AIzaSy..."
+                    className="h-9 text-xs font-mono"
+                  />
+                  <p className="text-[11px] text-gray-500">
+                    Get a free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-blue-600 underline font-semibold">Google AI Studio</a> to ensure 100% reliable bill digitizing.
+                  </p>
+                </div>
+
                 {/* Logo Upload */}
                 <div className="space-y-2 sm:col-span-2 pt-2 border-t border-gray-100">
                   <Label className="text-xs font-bold text-gray-700">Company Logo</Label>
@@ -726,178 +784,161 @@ export default function Settings() {
           {/* Modal Scrollable Bill Canvas Body */}
           <div className="flex-1 overflow-auto p-2 sm:p-6 flex justify-center bg-gray-200/80">
             
-            {/* Visual Simulated Invoice Preview Container */}
-            <div 
-              style={{ width: '100%', maxWidth: '680px', minHeight: '800px' }}
-              className={`bg-white shadow-xl rounded-xl p-4 sm:p-8 border border-gray-300 space-y-4 sm:space-y-6 select-none ${
-                previewingLayout?.id === 'elegant' ? 'font-serif' :
-                previewingLayout?.id === 'tech' ? 'font-mono' : 'font-sans'
-              }`}
-            >
-              {/* Header Rendering based on layout type */}
-              {previewingLayout?.id === 'minimal' ? (
-                <div className="text-center border-b pb-6 space-y-1">
-                  <h1 className="text-2xl font-black tracking-tight text-gray-900">{companyName || 'BillCraft Inc.'}</h1>
-                  <p className="text-xs text-gray-500">{address || '123 Tech Hub, Chennai, India'}</p>
-                  {gstNo && <p className="text-xs font-semibold text-gray-600">GSTIN: {gstNo}</p>}
-                </div>
-              ) : previewingLayout?.id === 'modern' ? (
-                <div className="flex justify-between items-start border-b pb-6">
-                  <div>
-                    <h2 className="text-3xl font-black text-blue-600 tracking-wider">INVOICE</h2>
-                    <p className="text-xs font-bold text-gray-700 mt-1">#INV-2026-0042</p>
-                    <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
+            {previewingLayout?.id === 'orange-classic' ? (
+              <div style={{ width: '100%', maxWidth: '780px' }} className="shadow-xl rounded-xl overflow-hidden bg-white">
+                <CustomMonishaLayout data={sampleMonishaData} settings={settings} />
+              </div>
+            ) : (
+              /* Visual Simulated Invoice Preview Container */
+              <div 
+                style={{ width: '100%', maxWidth: '680px', minHeight: '800px' }}
+                className={`bg-white shadow-xl rounded-xl p-4 sm:p-8 border border-gray-300 space-y-4 sm:space-y-6 select-none ${
+                  previewingLayout?.id === 'elegant' ? 'font-serif' :
+                  previewingLayout?.id === 'tech' ? 'font-mono' : 'font-sans'
+                }`}
+              >
+                {/* Header Rendering based on layout type */}
+                {previewingLayout?.id === 'minimal' ? (
+                  <div className="text-center border-b pb-6 space-y-1">
+                    <h1 className="text-2xl font-black tracking-tight text-gray-900">{companyName || 'BillCraft Inc.'}</h1>
+                    <p className="text-xs text-gray-500">{address || '123 Tech Hub, Chennai, India'}</p>
+                    {gstNo && <p className="text-xs font-semibold text-gray-600">GSTIN: {gstNo}</p>}
                   </div>
-                  <div className="text-right">
-                    <h1 className="text-xl font-black text-gray-900">{companyName || 'BillCraft Inc.'}</h1>
-                    <p className="text-xs text-gray-500 mt-0.5">{address || '123 Tech Hub, Chennai'}</p>
-                    {gstNo && <p className="text-xs font-bold text-gray-600">GST: {gstNo}</p>}
-                  </div>
-                </div>
-              ) : previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? (
-                <div className="bg-slate-900 text-white p-6 rounded-xl flex justify-between items-center -mx-2 -mt-2 shadow-md">
-                  <div>
-                    <h1 className="text-2xl font-black tracking-wider text-white">{companyName || 'BillCraft Corporate'}</h1>
-                    <p className="text-xs text-slate-300 mt-0.5">{address || '123 Tech Hub, Chennai'}</p>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-2xl font-black tracking-widest text-slate-100 uppercase">INVOICE</h2>
-                    <p className="text-xs text-slate-300">#INV-2026-0042</p>
-                  </div>
-                </div>
-              ) : previewingLayout?.id === 'orange-classic' ? (
-                <div className="flex justify-between items-start border-b-2 border-orange-500 pb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-orange-600 text-white rounded-xl flex items-center justify-center font-black text-base shadow-sm">
-                      {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
-                    </div>
+                ) : previewingLayout?.id === 'modern' ? (
+                  <div className="flex justify-between items-start border-b pb-6">
                     <div>
-                      <h1 className="text-xl font-black text-orange-600">{companyName || 'Monisha Retail Corp'}</h1>
-                      <p className="text-xs text-gray-600">{address || '123 Market Road'}</p>
-                      {gstNo && <p className="text-xs font-bold text-gray-800">GST: {gstNo}</p>}
+                      <h2 className="text-3xl font-black text-blue-600 tracking-wider">INVOICE</h2>
+                      <p className="text-xs font-bold text-gray-700 mt-1">#INV-2026-0042</p>
+                      <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
+                    </div>
+                    <div className="text-right">
+                      <h1 className="text-xl font-black text-gray-900">{companyName || 'BillCraft Inc.'}</h1>
+                      <p className="text-xs text-gray-500 mt-0.5">{address || '123 Tech Hub, Chennai'}</p>
+                      {gstNo && <p className="text-xs font-bold text-gray-600">GST: {gstNo}</p>}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <h2 className="text-3xl font-black text-orange-600">INVOICE</h2>
-                    <p className="text-xs font-bold text-gray-900">#INV-2026-0042</p>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-block mt-1">
-                      PAID
-                    </span>
+                ) : previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? (
+                  <div className="bg-slate-900 text-white p-6 rounded-xl flex justify-between items-center -mx-2 -mt-2 shadow-md">
+                    <div>
+                      <h1 className="text-2xl font-black tracking-wider text-white">{companyName || 'BillCraft Corporate'}</h1>
+                      <p className="text-xs text-slate-300 mt-0.5">{address || '123 Tech Hub, Chennai'}</p>
+                    </div>
+                    <div className="text-right">
+                      <h2 className="text-2xl font-black tracking-widest text-slate-100 uppercase">INVOICE</h2>
+                      <p className="text-xs text-slate-300">#INV-2026-0042</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="flex justify-between items-start border-b pb-6">
-                  <div className="flex items-center gap-3">
-                    {logoUrl ? (
-                      <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-lg" />
-                    ) : (
-                      <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm">
-                        {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
+                ) : (
+                  <div className="flex justify-between items-start border-b pb-6">
+                    <div className="flex items-center gap-3">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded-lg" />
+                      ) : (
+                        <div className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center font-bold text-base shadow-sm">
+                          {companyName ? companyName.slice(0, 2).toUpperCase() : 'BC'}
+                        </div>
+                      )}
+                      <div>
+                        <h1 className="text-xl font-bold text-gray-900 tracking-tight">{companyName || 'BillCraft Inc.'}</h1>
+                        <p className="text-xs text-gray-500 mt-0.5">{address || '123 Business Way, Suite 100'}</p>
+                        {gstNo && <p className="text-xs font-semibold text-gray-600">GST: {gstNo}</p>}
                       </div>
-                    )}
-                    <div>
-                      <h1 className="text-xl font-bold text-gray-900 tracking-tight">{companyName || 'BillCraft Inc.'}</h1>
-                      <p className="text-xs text-gray-500 mt-0.5">{address || '123 Business Way, Suite 100'}</p>
-                      {gstNo && <p className="text-xs font-semibold text-gray-600">GST: {gstNo}</p>}
+                    </div>
+                    <div className="text-right">
+                      <h2 className="text-2xl font-black tracking-wider text-gray-900">INVOICE</h2>
+                      <p className="text-xs font-bold text-gray-900 mt-1">#INV-2026-0042</p>
+                      <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-block mt-1">
+                        PAID
+                      </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <h2 className="text-2xl font-black tracking-wider text-gray-900">INVOICE</h2>
-                    <p className="text-xs font-bold text-gray-900 mt-1">#INV-2026-0042</p>
-                    <p className="text-xs text-gray-500">Date: {new Date().toISOString().split('T')[0]}</p>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-800 border border-green-200 inline-block mt-1">
-                      PAID
-                    </span>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Billed To Customer Details */}
-              <div className={`p-4 rounded-xl ${
-                previewingLayout?.id === 'orange-classic' ? 'bg-orange-50/60 border border-orange-200' :
-                previewingLayout?.id === 'professional' ? 'bg-gray-50 border border-gray-200' :
-                previewingLayout?.id === 'playful' ? 'bg-purple-50/50 border border-purple-100 rounded-2xl' :
-                'bg-gray-50'
-              }`}>
-                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Billed To Customer</p>
-                <h4 className="font-bold text-sm text-gray-900">M. Kavin Kumar</h4>
-                <p className="text-xs text-gray-600 mt-0.5">1/239 KK Palli, Phone: +91 9361654668</p>
-              </div>
-
-              {/* Items Table */}
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className={`border-b ${
-                    previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? 'bg-slate-900 text-white' :
-                    previewingLayout?.id === 'orange-classic' ? 'bg-orange-600 text-white font-bold' :
-                    previewingLayout?.id === 'playful' ? 'bg-purple-100 text-purple-950 font-bold' :
-                    'bg-gray-100 text-gray-700 font-bold'
-                  }`}>
-                    <th className="py-2.5 px-3">Item Description</th>
-                    <th className="py-2.5 px-3 text-center">Qty</th>
-                    <th className="py-2.5 px-3 text-right">Rate</th>
-                    <th className="py-2.5 px-3 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 text-gray-800">
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium">Software Development & Consulting</td>
-                    <td className="py-2.5 px-3 text-center">1</td>
-                    <td className="py-2.5 px-3 text-right">₹2,500.00</td>
-                    <td className="py-2.5 px-3 text-right font-bold">₹2,500.00</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2.5 px-3 font-medium">Cloud Infrastructure & Setup</td>
-                    <td className="py-2.5 px-3 text-center">1</td>
-                    <td className="py-2.5 px-3 text-right">₹1,450.00</td>
-                    <td className="py-2.5 px-3 text-right font-bold">₹1,450.00</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Summary and Bank Details Section */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div className="space-y-1 text-xs text-gray-600">
-                  <p className="font-bold text-gray-800 uppercase tracking-wider text-[10px]">Payment Details</p>
-                  <p>Bank: <span className="font-semibold text-gray-900">{bankName || 'State Bank of India'}</span></p>
-                  <p>Account: <span className="font-semibold text-gray-900">{accountNo || 'XXXX123456'}</span></p>
-                  <p>UPI ID: <span className="font-semibold text-gray-900">{upiId || 'business@upi'}</span></p>
-                </div>
-
-                <div className={`space-y-2 p-4 rounded-xl text-xs ${
-                  previewingLayout?.id === 'orange-classic' ? 'bg-orange-600 text-white shadow-sm' :
-                  previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? 'bg-slate-900 text-white shadow-sm' :
-                  previewingLayout?.id === 'modern' ? 'bg-blue-600 text-white shadow-sm' :
-                  'bg-gray-50 border'
+                {/* Billed To Customer Details */}
+                <div className={`p-4 rounded-xl ${
+                  previewingLayout?.id === 'professional' ? 'bg-gray-50 border border-gray-200' :
+                  previewingLayout?.id === 'playful' ? 'bg-purple-50/50 border border-purple-100 rounded-2xl' :
+                  'bg-gray-50'
                 }`}>
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span className="font-bold">₹3,950.00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Tax (5%):</span>
-                    <span className="font-bold">₹197.50</span>
-                  </div>
-                  <div className="flex justify-between font-black text-base pt-2 border-t border-current">
-                    <span>Grand Total:</span>
-                    <span>₹4,147.50</span>
-                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-0.5">Billed To Customer</p>
+                  <h4 className="font-bold text-sm text-gray-900">M. Kavin Kumar</h4>
+                  <p className="text-xs text-gray-600 mt-0.5">1/239 KK Palli, Phone: +91 9361654668</p>
                 </div>
-              </div>
 
-              {/* Footer and Sign */}
-              <div className="flex justify-between items-end pt-8 text-xs text-gray-500">
-                <div>
-                  <p className="font-bold text-gray-700">Terms & Conditions</p>
-                  <p className="text-[11px] text-gray-500">Payment due within 15 days. Thank you for your business!</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-32 border-b border-gray-400 mx-auto mb-1"></div>
-                  <p className="font-bold text-gray-800">Authorized Signature</p>
-                </div>
-              </div>
+                {/* Items Table */}
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className={`border-b ${
+                      previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? 'bg-slate-900 text-white' :
+                      previewingLayout?.id === 'playful' ? 'bg-purple-100 text-purple-950 font-bold' :
+                      'bg-gray-100 text-gray-700 font-bold'
+                    }`}>
+                      <th className="py-2.5 px-3">Item Description</th>
+                      <th className="py-2.5 px-3 text-center">Qty</th>
+                      <th className="py-2.5 px-3 text-right">Rate</th>
+                      <th className="py-2.5 px-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 text-gray-800">
+                    <tr>
+                      <td className="py-2.5 px-3 font-medium">Interior UPVC Furnishing Work</td>
+                      <td className="py-2.5 px-3 text-center">1</td>
+                      <td className="py-2.5 px-3 text-right">₹2,500.00</td>
+                      <td className="py-2.5 px-3 text-right font-bold">₹2,500.00</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-3 font-medium">Design & Consultation</td>
+                      <td className="py-2.5 px-3 text-center">1</td>
+                      <td className="py-2.5 px-3 text-right">₹1,450.00</td>
+                      <td className="py-2.5 px-3 text-right font-bold">₹1,450.00</td>
+                    </tr>
+                  </tbody>
+                </table>
 
-            </div>
+                {/* Summary and Bank Details Section */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="space-y-1 text-xs text-gray-600">
+                    <p className="font-bold text-gray-800 uppercase tracking-wider text-[10px]">Payment Details</p>
+                    <p>Bank: <span className="font-semibold text-gray-900">{bankName || 'State Bank of India'}</span></p>
+                    <p>Account: <span className="font-semibold text-gray-900">{accountNo || 'XXXX123456'}</span></p>
+                    <p>UPI ID: <span className="font-semibold text-gray-900">{upiId || 'business@upi'}</span></p>
+                  </div>
+
+                  <div className={`space-y-2 p-4 rounded-xl text-xs ${
+                    previewingLayout?.id === 'bold' || previewingLayout?.id === 'corporate' ? 'bg-slate-900 text-white shadow-sm' :
+                    previewingLayout?.id === 'modern' ? 'bg-blue-600 text-white shadow-sm' :
+                    'bg-gray-50 border'
+                  }`}>
+                    <div className="flex justify-between">
+                      <span>Subtotal:</span>
+                      <span className="font-bold">₹3,950.00</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Tax (5%):</span>
+                      <span className="font-bold">₹197.50</span>
+                    </div>
+                    <div className="flex justify-between font-black text-base pt-2 border-t border-current">
+                      <span>Grand Total:</span>
+                      <span>₹4,147.50</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer and Sign */}
+                <div className="flex justify-between items-end pt-8 text-xs text-gray-500">
+                  <div>
+                    <p className="font-bold text-gray-700">Terms & Conditions</p>
+                    <p className="text-[11px] text-gray-500">Payment due within 15 days. Thank you for your business!</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-32 border-b border-gray-400 mx-auto mb-1"></div>
+                    <p className="font-bold text-gray-800">Authorized Signature</p>
+                  </div>
+                </div>
+
+              </div>
+            )}
 
           </div>
 
