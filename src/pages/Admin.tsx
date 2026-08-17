@@ -594,11 +594,11 @@ export default function Admin() {
 
       {/* Admin Design & Grant Access Builder Modal */}
       <Dialog open={isDesignModalOpen} onOpenChange={setIsDesignModalOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              Craft Custom Layout for {selectedRequest?.organization?.name || selectedRequest?.user?.email}
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl">
+          <DialogHeader className="pr-6">
+            <DialogTitle className="text-sm sm:text-base font-bold text-gray-900 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+              <span>Craft Custom Layout for {selectedRequest?.organization?.name || selectedRequest?.user?.email}</span>
             </DialogTitle>
             <DialogDescription className="text-xs text-gray-500">
               Select or customize the invoice design format to grant specifically to this organization.
@@ -612,7 +612,14 @@ export default function Admin() {
                 <Label className="text-xs font-bold text-gray-700">User's Uploaded Reference:</Label>
                 <div className="h-44 bg-white rounded-lg border flex items-center justify-center overflow-hidden">
                   {selectedRequest?.fileUrl && (
-                    <img src={selectedRequest.fileUrl} alt="Reference" className="max-h-full object-contain" />
+                    selectedRequest.fileUrl.startsWith('data:application/pdf') || selectedRequest.fileUrl.includes('.pdf') ? (
+                      <div className="text-center p-4">
+                        <FileText className="w-10 h-10 text-red-600 mx-auto mb-1" />
+                        <span className="text-xs font-bold text-gray-700">PDF Document</span>
+                      </div>
+                    ) : (
+                      <img src={selectedRequest.fileUrl} alt="Reference" className="max-h-full object-contain" />
+                    )
                   )}
                 </div>
                 <p className="text-[11px] text-gray-500 italic">"{selectedRequest?.note}"</p>
@@ -649,11 +656,12 @@ export default function Admin() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsDesignModalOpen(false)}>
+          <DialogFooter className="gap-2 pt-2 border-t mt-2">
+            <Button variant="outline" size="sm" onClick={() => setIsDesignModalOpen(false)}>
               Cancel
             </Button>
             <Button
+              size="sm"
               onClick={() => {
                 if (!selectedRequest) return;
                 approveLayoutMutation.mutate({
@@ -662,7 +670,7 @@ export default function Admin() {
                 });
               }}
               disabled={approveLayoutMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700 text-white font-bold"
+              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs"
             >
               {approveLayoutMutation.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
               Grant Layout Access to User
@@ -673,20 +681,20 @@ export default function Admin() {
 
       {/* Admin Assign Dedicated API Key Dialog Modal */}
       <Dialog open={isKeyModalOpen} onOpenChange={setIsKeyModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
-              <Key className="w-4 h-4 text-purple-600" />
-              Dedicated API Key for {selectedUserForApiKey?.email}
+        <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-2xl">
+          <DialogHeader className="pr-6 space-y-1.5">
+            <DialogTitle className="text-sm sm:text-base font-bold text-gray-900 flex items-start gap-2 break-all">
+              <Key className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+              <span>Dedicated API Key for <span className="text-purple-700 font-mono text-xs sm:text-sm font-semibold">{selectedUserForApiKey?.email}</span></span>
             </DialogTitle>
-            <DialogDescription className="text-xs text-gray-500">
+            <DialogDescription className="text-xs text-gray-500 leading-relaxed">
               Assign a dedicated Google Gemini API key to this organization. All their handwritten and printed bill OCR extractions will run exclusively on their own dedicated 15 RPM free quota.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-1">
                 <Label htmlFor="dedicatedKeyInput" className="text-xs font-bold text-gray-700">
                   Google Gemini API Key:
                 </Label>
@@ -709,12 +717,12 @@ export default function Admin() {
                   setApiKeyInput(e.target.value);
                   setTestKeyResult(null);
                 }}
-                className="font-mono text-xs h-10"
+                className="font-mono text-xs h-10 w-full"
               />
             </div>
 
             {/* Test Connection Button & Live Status Alert */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -740,7 +748,7 @@ export default function Admin() {
             </div>
 
             {testKeyResult && (
-              <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 ${
+              <div className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 break-all ${
                 testKeyResult.success 
                   ? 'bg-green-50 text-green-800 border border-green-200' 
                   : 'bg-red-50 text-red-800 border border-red-200'
@@ -750,7 +758,7 @@ export default function Admin() {
                 ) : (
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                 )}
-                <div>
+                <div className="flex-1">
                   <p>{testKeyResult.message}</p>
                 </div>
               </div>
@@ -758,7 +766,7 @@ export default function Admin() {
 
             <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 text-[11px] text-purple-900 space-y-1">
               <p className="font-bold flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Free Tier Scaling Guarantee:
+                <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0" /> Free Tier Scaling Guarantee:
               </p>
               <p className="text-purple-700 leading-relaxed">
                 By assigning dedicated free keys created under separate Google accounts, this client will never hit rate limits caused by other users on your platform.
@@ -766,11 +774,12 @@ export default function Admin() {
             </div>
           </div>
 
-          <DialogFooter className="gap-2 flex flex-col sm:flex-row sm:justify-between">
-            {selectedUserForApiKey?.dedicatedApiKey && (
+          <DialogFooter className="gap-2 flex flex-col sm:flex-row sm:items-center sm:justify-between pt-3 border-t mt-2">
+            {selectedUserForApiKey?.dedicatedApiKey ? (
               <Button
                 type="button"
                 variant="ghost"
+                size="sm"
                 onClick={() => {
                   assignApiKeyMutation.mutate({
                     userId: selectedUserForApiKey.id,
@@ -778,17 +787,18 @@ export default function Admin() {
                   });
                 }}
                 disabled={assignApiKeyMutation.isPending}
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-bold order-2 sm:order-1"
+                className="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-bold w-full sm:w-auto justify-center"
               >
-                Remove Dedicated Key (Reset to Default)
+                Remove Dedicated Key (Reset)
               </Button>
-            )}
+            ) : <div className="hidden sm:block" />}
 
-            <div className="flex items-center gap-2 justify-end order-1 sm:order-2 w-full sm:w-auto">
-              <Button variant="outline" onClick={() => setIsKeyModalOpen(false)}>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <Button variant="outline" size="sm" onClick={() => setIsKeyModalOpen(false)} className="text-xs h-9 flex-1 sm:flex-none">
                 Cancel
               </Button>
               <Button
+                size="sm"
                 onClick={() => {
                   if (!selectedUserForApiKey) return;
                   assignApiKeyMutation.mutate({
@@ -797,7 +807,7 @@ export default function Admin() {
                   });
                 }}
                 disabled={assignApiKeyMutation.isPending || (!apiKeyInput.trim() && !selectedUserForApiKey?.dedicatedApiKey)}
-                className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs"
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs h-9 shadow-sm flex-1 sm:flex-none"
               >
                 {assignApiKeyMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
                 Save & Assign Key
