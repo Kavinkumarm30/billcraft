@@ -1285,15 +1285,21 @@ app.use(express.json({ limit: '10mb' }));
     }
   });
 
-  // Admin: Get Pending Custom Layouts (Handles BOTH /pending and root route)
+  // Admin: Get All / Pending Custom Layouts (Includes full audit history)
   const getAdminCustomLayouts = async (req: AuthRequest, res: any) => {
     try {
       if (req.dbUser.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: "Forbidden: Super Admin only" });
       }
 
-      const pendingRequests = await db.query.customLayoutRequests.findMany({
-        where: eq(customLayoutRequests.status, 'PENDING'),
+      const statusFilter = req.query.status as string;
+      let whereCondition = undefined;
+      if (statusFilter && statusFilter.toUpperCase() !== 'ALL') {
+        whereCondition = eq(customLayoutRequests.status, statusFilter.toUpperCase());
+      }
+
+      const requests = await db.query.customLayoutRequests.findMany({
+        where: whereCondition,
         with: {
           user: true,
           organization: true
@@ -1301,7 +1307,7 @@ app.use(express.json({ limit: '10mb' }));
         orderBy: [desc(customLayoutRequests.submittedAt)]
       });
 
-      res.json(pendingRequests);
+      res.json(requests);
     } catch (error: any) {
       console.error("Admin fetch custom layouts error:", error);
       res.status(500).json({ error: error.message });

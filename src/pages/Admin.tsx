@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
-import { Shield, UserX, UserCheck, Loader2, Check, X, LayoutTemplate, ExternalLink, Sparkles, FileText, CheckCircle2, Key, KeyRound, AlertCircle, RefreshCw } from 'lucide-react';
+import { Shield, UserX, UserCheck, Loader2, Check, X, LayoutTemplate, ExternalLink, Sparkles, FileText, CheckCircle2, Key, KeyRound, AlertCircle, RefreshCw, Search, History, Clock, RotateCcw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
@@ -14,11 +14,13 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'custom-layouts'>('users');
 
-  // Custom layout builder modal state for Admin
+  // Custom layout builder & history filter state for Admin
   const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [selectedLayoutForUser, setSelectedLayoutForUser] = useState<string>('orange-classic');
   const [isDesignModalOpen, setIsDesignModalOpen] = useState(false);
+  const [layoutStatusFilter, setLayoutStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [layoutSearchQuery, setLayoutSearchQuery] = useState('');
 
   // Dedicated API Key Modal State for Admin
   const [selectedUserForApiKey, setSelectedUserForApiKey] = useState<any | null>(null);
@@ -55,7 +57,7 @@ export default function Admin() {
     queryKey: ['admin-custom-layouts'],
     queryFn: async () => {
       const token = await getToken();
-      const res = await fetch('/api/admin/custom-layouts/pending', {
+      const res = await fetch('/api/admin/custom-layouts', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch custom layout requests');
@@ -447,135 +449,323 @@ export default function Admin() {
         </div>
       )}
 
-      {/* 3. CUSTOM LAYOUT REQUESTS TAB (ADMIN BUILDS & GRANTS ACCESS) */}
-      {activeTab === 'custom-layouts' && (
-        <div className="space-y-4">
-          {customRequestsLoading ? (
-            <div className="p-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
-          ) : customLayoutRequests?.length === 0 ? (
-            <div className="bg-white p-12 text-center rounded-2xl shadow-sm border border-gray-100 space-y-2">
-              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
-              <h3 className="text-base font-bold text-gray-900">No Pending Custom Layout Requests</h3>
-              <p className="text-xs text-gray-500">When users upload custom bill designs in Settings, they will appear here for you to design and grant access.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {customLayoutRequests?.map((req: any) => (
-                <div key={req.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col lg:flex-row gap-6 items-start">
-                  
-                  {/* Uploaded Design Thumbnail / PDF preview */}
-                  <div className="w-full lg:w-1/4 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 group relative flex items-center justify-center min-h-[180px]">
-                    {req.fileUrl?.startsWith('data:application/pdf') || req.fileUrl?.includes('.pdf') ? (
-                      <div className="p-6 text-center flex flex-col items-center justify-center gap-2">
-                        <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shadow-xs">
-                          <FileText className="w-7 h-7" />
-                        </div>
-                        <span className="text-xs font-bold text-gray-800">PDF Bill Document</span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPreviewImage(req.fileUrl)}
-                          className="text-[11px] font-bold h-7 mt-1 border-red-200 text-red-700 hover:bg-red-50"
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" /> View PDF
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <img 
-                          src={req.fileUrl} 
-                          alt="Custom Design" 
-                          className="w-full h-48 object-contain cursor-pointer transition-transform group-hover:scale-105" 
-                          onClick={() => setPreviewImage(req.fileUrl)}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setPreviewImage(req.fileUrl)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 transition-opacity"
-                        >
-                          <ExternalLink className="w-4 h-4" /> View Full Image
-                        </button>
-                      </>
-                    )}
-                  </div>
+      {/* 3. CUSTOM LAYOUT REQUESTS TAB (ADMIN AUDIT LOG & ACCESS BUILDER) */}
+      {activeTab === 'custom-layouts' && (() => {
+        const pendingCount = customLayoutRequests?.filter((r: any) => r.status === 'PENDING').length || 0;
+        const approvedCount = customLayoutRequests?.filter((r: any) => r.status === 'APPROVED').length || 0;
+        const rejectedCount = customLayoutRequests?.filter((r: any) => r.status === 'REJECTED').length || 0;
+        const allCount = customLayoutRequests?.length || 0;
 
-                  {/* Request Information */}
-                  <div className="w-full lg:w-3/4 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
-                            PENDING REVIEW
-                          </span>
-                          <h3 className="font-bold text-base text-gray-900">
-                            Organization: {req.organization?.name || 'User Organization'}
-                          </h3>
+        const filteredRequests = customLayoutRequests?.filter((req: any) => {
+          const matchesStatus = layoutStatusFilter === 'ALL' || req.status === layoutStatusFilter;
+          const q = layoutSearchQuery.toLowerCase().trim();
+          const matchesSearch = !q || 
+            (req.organization?.name?.toLowerCase().includes(q)) ||
+            (req.user?.email?.toLowerCase().includes(q)) ||
+            (req.user?.name?.toLowerCase().includes(q)) ||
+            (req.note?.toLowerCase().includes(q));
+          return matchesStatus && matchesSearch;
+        }) || [];
+
+        return (
+          <div className="space-y-5">
+            {/* Header & Filter Controls */}
+            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              {/* Filter Pills */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setLayoutStatusFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    layoutStatusFilter === 'ALL'
+                      ? 'bg-white text-gray-900 shadow-xs ring-1 ring-black/5'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  All Requests
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-gray-200 text-gray-800 font-mono">
+                    {allCount}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLayoutStatusFilter('PENDING')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    layoutStatusFilter === 'PENDING'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-gray-600 hover:text-amber-800'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  Pending
+                  {pendingCount > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      layoutStatusFilter === 'PENDING' ? 'bg-amber-700 text-white' : 'bg-amber-100 text-amber-900'
+                    }`}>
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLayoutStatusFilter('APPROVED')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    layoutStatusFilter === 'APPROVED'
+                      ? 'bg-green-600 text-white shadow-xs'
+                      : 'text-gray-600 hover:text-green-800'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Access Granted
+                  {approvedCount > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      layoutStatusFilter === 'APPROVED' ? 'bg-green-800 text-white' : 'bg-green-100 text-green-900'
+                    }`}>
+                      {approvedCount}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLayoutStatusFilter('REJECTED')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    layoutStatusFilter === 'REJECTED'
+                      ? 'bg-red-600 text-white shadow-xs'
+                      : 'text-gray-600 hover:text-red-800'
+                  }`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Rejected
+                  {rejectedCount > 0 && (
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      layoutStatusFilter === 'REJECTED' ? 'bg-red-800 text-white' : 'bg-red-100 text-red-900'
+                    }`}>
+                      {rejectedCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search org, email, note..."
+                  value={layoutSearchQuery}
+                  onChange={(e) => setLayoutSearchQuery(e.target.value)}
+                  className="pl-9 h-9 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
+            {/* List Content */}
+            {customRequestsLoading ? (
+              <div className="p-12 flex justify-center bg-white rounded-2xl border">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              </div>
+            ) : filteredRequests.length === 0 ? (
+              <div className="bg-white p-12 text-center rounded-2xl shadow-sm border border-gray-100 space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-gray-400 mx-auto" />
+                <h3 className="text-base font-bold text-gray-900">
+                  {layoutStatusFilter === 'ALL' 
+                    ? 'No Custom Layout Requests Found' 
+                    : `No ${layoutStatusFilter.toLowerCase()} layout requests`}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {layoutSearchQuery 
+                    ? 'Try adjusting your search query or clear the filter.'
+                    : 'Customer uploads from Settings will be tracked here historically.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {filteredRequests.map((req: any) => (
+                  <div key={req.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col lg:flex-row gap-6 items-start transition-all hover:border-gray-300">
+                    
+                    {/* Uploaded Design Thumbnail / PDF preview */}
+                    <div className="w-full lg:w-1/4 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 group relative flex items-center justify-center min-h-[180px]">
+                      {req.fileUrl?.startsWith('data:application/pdf') || req.fileUrl?.includes('.pdf') ? (
+                        <div className="p-6 text-center flex flex-col items-center justify-center gap-2">
+                          <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shadow-xs">
+                            <FileText className="w-7 h-7" />
+                          </div>
+                          <span className="text-xs font-bold text-gray-800">PDF Bill Document</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPreviewImage(req.fileUrl)}
+                            className="text-[11px] font-bold h-7 mt-1 border-red-200 text-red-700 hover:bg-red-50"
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1" /> View PDF
+                          </Button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Requested by: <span className="font-semibold text-gray-700">{req.user?.name || req.user?.email}</span> ({req.user?.email})
+                      ) : (
+                        <>
+                          <img 
+                            src={req.fileUrl} 
+                            alt="Custom Design" 
+                            className="w-full h-48 object-contain cursor-pointer transition-transform group-hover:scale-105" 
+                            onClick={() => setPreviewImage(req.fileUrl)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPreviewImage(req.fileUrl)}
+                            className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 transition-opacity"
+                          >
+                            <ExternalLink className="w-4 h-4" /> View Full Image
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Request Information & Audit History */}
+                    <div className="w-full lg:w-3/4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              req.status === 'APPROVED' ? 'bg-green-100 text-green-800 border border-green-200' :
+                              req.status === 'REJECTED' ? 'bg-red-100 text-red-800 border border-red-200' :
+                              'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}>
+                              {req.status === 'APPROVED' ? '🟢 ACCESS GRANTED' :
+                               req.status === 'REJECTED' ? '🔴 REJECTED' :
+                               '🟡 PENDING REVIEW'}
+                            </span>
+                            <h3 className="font-bold text-base text-gray-900">
+                              Organization: {req.organization?.name || 'User Organization'}
+                            </h3>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Requested by: <span className="font-semibold text-gray-700">{req.user?.name || req.user?.email}</span> ({req.user?.email})
+                          </p>
+                        </div>
+                        
+                        <div className="text-right">
+                          <span className="text-[11px] text-gray-400 font-mono block">
+                            Submitted: {new Date(req.submittedAt).toLocaleString()}
+                          </span>
+                          {req.verifiedAt && (
+                            <span className="text-[10px] text-gray-500 font-mono block mt-0.5">
+                              {req.status === 'APPROVED' ? 'Granted' : 'Reviewed'}: {new Date(req.verifiedAt).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* User note */}
+                      <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                        <Label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">User's Notes & Instructions:</Label>
+                        <p className="text-xs text-gray-800 mt-1 italic">
+                          "{req.note || 'No specific instructions provided.'}"
                         </p>
                       </div>
-                      <span className="text-xs text-gray-400 font-mono">
-                        Submitted: {new Date(req.submittedAt).toLocaleString()}
-                      </span>
-                    </div>
 
-                    <div className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                      <Label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">User's Notes & Instructions:</Label>
-                      <p className="text-xs text-gray-800 mt-1 italic">
-                        "{req.note || 'No specific instructions provided.'}"
-                      </p>
-                    </div>
+                      {/* Admin Actions */}
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        {req.status === 'PENDING' && (
+                          <>
+                            <Button
+                              onClick={() => {
+                                setSelectedRequest(req);
+                                setSelectedLayoutForUser('orange-classic');
+                                setIsDesignModalOpen(true);
+                              }}
+                              className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                              Design & Grant Custom Layout
+                            </Button>
 
-                    {/* Admin Actions */}
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
-                      <Button
-                        onClick={() => {
-                          setSelectedRequest(req);
-                          setSelectedLayoutForUser('orange-classic');
-                          setIsDesignModalOpen(true);
-                        }}
-                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                        Design & Grant Custom Layout
-                      </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => approveLayoutMutation.mutate({ requestId: req.id })}
+                              disabled={approveLayoutMutation.isPending}
+                              className="border-green-300 text-green-700 hover:bg-green-50 text-xs font-bold"
+                            >
+                              <Check className="w-3.5 h-3.5 mr-1 text-green-600" />
+                              Quick Grant Access
+                            </Button>
 
-                      <Button
-                        variant="outline"
-                        onClick={() => approveLayoutMutation.mutate({ requestId: req.id })}
-                        disabled={approveLayoutMutation.isPending}
-                        className="border-green-300 text-green-700 hover:bg-green-50 text-xs font-bold"
-                      >
-                        <Check className="w-3.5 h-3.5 mr-1 text-green-600" />
-                        Quick Grant Access
-                      </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                const note = window.prompt("Reason for rejecting custom layout request:");
+                                if (note !== null) {
+                                  rejectLayoutMutation.mutate({ requestId: req.id, note });
+                                }
+                              }}
+                              disabled={rejectLayoutMutation.isPending}
+                              className="border-red-200 text-red-600 hover:bg-red-50 text-xs"
+                            >
+                              <X className="w-3.5 h-3.5 mr-1" />
+                              Reject Request
+                            </Button>
+                          </>
+                        )}
 
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          const note = window.prompt("Reason for rejecting custom layout request:");
-                          if (note !== null) {
-                            rejectLayoutMutation.mutate({ requestId: req.id, note });
-                          }
-                        }}
-                        disabled={rejectLayoutMutation.isPending}
-                        className="border-red-200 text-red-600 hover:bg-red-50 text-xs"
-                      >
-                        <X className="w-3.5 h-3.5 mr-1" />
-                        Reject Request
-                      </Button>
+                        {req.status === 'APPROVED' && (
+                          <>
+                            <Button
+                              onClick={() => {
+                                setSelectedRequest(req);
+                                setSelectedLayoutForUser('orange-classic');
+                                setIsDesignModalOpen(true);
+                              }}
+                              variant="outline"
+                              className="border-purple-300 text-purple-700 hover:bg-purple-50 text-xs font-bold"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-purple-600" />
+                              Change Layout Format
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                const note = window.prompt("Reason for revoking/rejecting this layout request:");
+                                if (note !== null) {
+                                  rejectLayoutMutation.mutate({ requestId: req.id, note });
+                                }
+                              }}
+                              disabled={rejectLayoutMutation.isPending}
+                              className="border-red-200 text-red-600 hover:bg-red-50 text-xs"
+                            >
+                              <X className="w-3.5 h-3.5 mr-1" />
+                              Revoke Access
+                            </Button>
+                          </>
+                        )}
+
+                        {req.status === 'REJECTED' && (
+                          <Button
+                            onClick={() => {
+                              setSelectedRequest(req);
+                              setSelectedLayoutForUser('orange-classic');
+                              setIsDesignModalOpen(true);
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                            Re-evaluate & Grant Access
+                          </Button>
+                        )}
+                      </div>
+
                     </div>
 
                   </div>
-
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Full Image / PDF Preview Modal */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
