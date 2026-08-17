@@ -475,7 +475,13 @@ app.use(express.json({ limit: '10mb' }));
         responseMimeType: "application/json",
       };
 
-      const modelChain = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
+      const modelChain = [
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+        "gemini-3-flash-preview",
+      ];
       let response;
       let lastError;
 
