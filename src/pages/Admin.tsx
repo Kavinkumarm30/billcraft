@@ -463,21 +463,41 @@ export default function Admin() {
               {customLayoutRequests?.map((req: any) => (
                 <div key={req.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col lg:flex-row gap-6 items-start">
                   
-                  {/* Uploaded Design Thumbnail */}
-                  <div className="w-full lg:w-1/4 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 group relative">
-                    <img 
-                      src={req.fileUrl} 
-                      alt="Custom Design" 
-                      className="w-full h-48 object-contain cursor-pointer transition-transform group-hover:scale-105" 
-                      onClick={() => setPreviewImage(req.fileUrl)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPreviewImage(req.fileUrl)}
-                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 transition-opacity"
-                    >
-                      <ExternalLink className="w-4 h-4" /> View Full Image
-                    </button>
+                  {/* Uploaded Design Thumbnail / PDF preview */}
+                  <div className="w-full lg:w-1/4 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 group relative flex items-center justify-center min-h-[180px]">
+                    {req.fileUrl?.startsWith('data:application/pdf') || req.fileUrl?.includes('.pdf') ? (
+                      <div className="p-6 text-center flex flex-col items-center justify-center gap-2">
+                        <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shadow-xs">
+                          <FileText className="w-7 h-7" />
+                        </div>
+                        <span className="text-xs font-bold text-gray-800">PDF Bill Document</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setPreviewImage(req.fileUrl)}
+                          className="text-[11px] font-bold h-7 mt-1 border-red-200 text-red-700 hover:bg-red-50"
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" /> View PDF
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <img 
+                          src={req.fileUrl} 
+                          alt="Custom Design" 
+                          className="w-full h-48 object-contain cursor-pointer transition-transform group-hover:scale-105" 
+                          onClick={() => setPreviewImage(req.fileUrl)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImage(req.fileUrl)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold gap-1 transition-opacity"
+                        >
+                          <ExternalLink className="w-4 h-4" /> View Full Image
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {/* Request Information */}
@@ -557,12 +577,16 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Full Image Preview Modal */}
+      {/* Full Image / PDF Preview Modal */}
       <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
         <DialogContent className="max-w-4xl p-2 bg-black/90">
-          <div className="flex justify-center p-4">
+          <div className="flex justify-center p-2">
             {previewImage && (
-              <img src={previewImage} alt="Full Preview" className="max-h-[80vh] object-contain rounded" />
+              previewImage.startsWith('data:application/pdf') || previewImage.includes('.pdf') ? (
+                <iframe src={previewImage} className="w-full h-[80vh] rounded-lg bg-white" title="PDF Bill Preview" />
+              ) : (
+                <img src={previewImage} alt="Full Preview" className="max-h-[80vh] object-contain rounded" />
+              )
             )}
           </div>
         </DialogContent>

@@ -1199,37 +1199,99 @@ app.use(express.json({ limit: '10mb' }));
   });
 
   
-  // Custom Layout Submit endpoint
-  app.post("/api/custom-layouts", requireAuth, async (req: AuthRequest, res) => {
+  // Customer: Fetch Custom Layout Requests for Current Organization
+  app.get("/api/custom-layout-requests", requireAuth, async (req: AuthRequest, res) => {
     try {
       const u = req.dbUser;
       if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
-      
-      const { fileUrl } = req.body;
-      if (!fileUrl) return res.status(400).json({ error: "File URL is required" });
+
+      const requests = await db.select().from(customLayoutRequests)
+        .where(eq(customLayoutRequests.orgId, u.orgId))
+        .orderBy(desc(customLayoutRequests.submittedAt));
+
+      res.json(requests);
+    } catch (error: any) {
+      console.error("Fetch custom layout requests error:", error);
+      res.status(500).json({ error: error.message || "Failed to fetch custom layout requests" });
+    }
+  });
+
+  // Customer: Submit Custom Layout Design Request (supports multipart file upload & JSON)
+  app.post("/api/custom-layout-requests", requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      let fileUrl = '';
+      if (req.file) {
+        fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      } else if (req.body.fileUrl) {
+        fileUrl = req.body.fileUrl;
+      }
+
+      if (!fileUrl) {
+        return res.status(400).json({ error: "Please upload an invoice design file or image" });
+      }
+
+      const note = req.body.note && typeof req.body.note === 'string' && req.body.note.trim().length > 0 
+        ? req.body.note.trim() 
+        : 'Custom layout design upload';
+
+      const newRequest = await db.insert(customLayoutRequests)
+        .values({
+          orgId: u.orgId,
+          userId: u.id,
+          fileUrl,
+          note,
+          status: 'PENDING',
+          submittedAt: new Date(),
+        }).returning();
+
+      res.json(newRequest[0]);
+    } catch (error: any) {
+      console.error("Submit custom layout request error:", error);
+      res.status(500).json({ error: error.message || "Failed to submit custom layout request" });
+    }
+  });
+
+  // Legacy alias for custom layout submit
+  app.post("/api/custom-layouts", requireAuth, upload.single('file'), async (req: AuthRequest, res) => {
+    try {
+      const u = req.dbUser;
+      if (!u.orgId) return res.status(404).json({ error: "Organization not found" });
+
+      let fileUrl = '';
+      if (req.file) {
+        fileUrl = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      } else if (req.body.fileUrl) {
+        fileUrl = req.body.fileUrl;
+      }
+
+      if (!fileUrl) return res.status(400).json({ error: "File URL or attachment is required" });
 
       const newRequest = await db.insert(customLayoutRequests)
         .values({
           userId: u.id,
           orgId: u.orgId,
           fileUrl,
-          status: 'PENDING'
+          note: req.body.note || 'Custom layout design upload',
+          status: 'PENDING',
+          submittedAt: new Date(),
         }).returning();
 
       res.json(newRequest[0]);
     } catch (error: any) {
-      
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Admin Custom Layouts endpoint
-  app.get("/api/admin/custom-layouts", requireAuth, async (req: AuthRequest, res) => {
+  // Admin: Get Pending Custom Layouts (Handles BOTH /pending and root route)
+  const getAdminCustomLayouts = async (req: AuthRequest, res: any) => {
     try {
       if (req.dbUser.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: "Forbidden: Super Admin only" });
       }
-      
+
       const pendingRequests = await db.query.customLayoutRequests.findMany({
         where: eq(customLayoutRequests.status, 'PENDING'),
         with: {
@@ -1238,21 +1300,24 @@ app.use(express.json({ limit: '10mb' }));
         },
         orderBy: [desc(customLayoutRequests.submittedAt)]
       });
-      
+
       res.json(pendingRequests);
     } catch (error: any) {
-      
+      console.error("Admin fetch custom layouts error:", error);
       res.status(500).json({ error: error.message });
     }
-  });
+  };
 
-  // Admin Approve Custom Layout
+  app.get("/api/admin/custom-layouts/pending", requireAuth, getAdminCustomLayouts);
+  app.get("/api/admin/custom-layouts", requireAuth, getAdminCustomLayouts);
+
+  // Admin: Approve Custom Layout & Grant Access
   app.post("/api/admin/custom-layouts/:id/approve", requireAuth, async (req: AuthRequest, res) => {
     try {
       if (req.dbUser.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: "Forbidden: Super Admin only" });
       }
-      
+
       const requestId = parseInt(req.params.id);
       const targetRequests = await db.select().from(customLayoutRequests).where(eq(customLayoutRequests.id, requestId));
       if (targetRequests.length === 0) return res.status(404).json({ error: "Request not found" });
@@ -1263,7 +1328,11 @@ app.use(express.json({ limit: '10mb' }));
         .set({ status: 'APPROVED', verifiedAt: new Date() })
         .where(eq(customLayoutRequests.id, requestId));
 
-      const updatePayload: any = { hasCustomLayoutAccess: true };
+      const updatePayload: any = { 
+        hasCustomLayoutAccess: true,
+        updatedAt: new Date()
+      };
+
       if (req.body.invoiceLayout) {
         updatePayload.invoiceLayout = typeof req.body.invoiceLayout === 'string' 
           ? req.body.invoiceLayout 
@@ -1281,23 +1350,23 @@ app.use(express.json({ limit: '10mb' }));
     }
   });
 
-  // Admin Reject Custom Layout
+  // Admin: Reject Custom Layout
   app.post("/api/admin/custom-layouts/:id/reject", requireAuth, async (req: AuthRequest, res) => {
     try {
       if (req.dbUser.role !== 'SUPER_ADMIN') {
         return res.status(403).json({ error: "Forbidden: Super Admin only" });
       }
-      
+
       const requestId = parseInt(req.params.id);
       const { note } = req.body;
-      
+
       await db.update(customLayoutRequests)
         .set({ status: 'REJECTED', verifiedAt: new Date(), note })
         .where(eq(customLayoutRequests.id, requestId));
 
       res.json({ success: true });
     } catch (error: any) {
-      
+      console.error("Reject custom layout error:", error);
       res.status(500).json({ error: error.message });
     }
   });

@@ -25,7 +25,8 @@ import {
   Minimize2,
   Maximize2,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  FileText
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog';
 
@@ -481,7 +482,14 @@ export default function Settings() {
                         className="w-16 h-16 rounded-lg bg-gray-50 border flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 shrink-0"
                         onClick={() => setFullPreviewUrl(req.fileUrl)}
                       >
-                        <img src={req.fileUrl} alt="Bill Preview" className="max-h-full object-contain" />
+                        {req.fileUrl?.startsWith('data:application/pdf') || req.fileUrl?.includes('.pdf') ? (
+                          <div className="flex flex-col items-center justify-center text-red-600">
+                            <FileText className="w-6 h-6" />
+                            <span className="text-[9px] font-bold mt-0.5">PDF</span>
+                          </div>
+                        ) : (
+                          <img src={req.fileUrl} alt="Bill Preview" className="max-h-full object-contain" />
+                        )}
                       </div>
                       <div>
                         <p className="text-xs font-bold text-gray-900">{req.note || 'Custom Bill Layout Request'}</p>
@@ -1025,12 +1033,16 @@ export default function Settings() {
         </DialogContent>
       </Dialog>
 
-      {/* Full Image Preview Modal */}
+      {/* Full Image / PDF Preview Modal */}
       <Dialog open={!!fullPreviewUrl} onOpenChange={() => setFullPreviewUrl(null)}>
-        <DialogContent className="max-w-3xl p-2 bg-black/90">
-          <div className="flex justify-center p-4">
+        <DialogContent className="max-w-4xl p-2 bg-black/90">
+          <div className="flex justify-center p-2">
             {fullPreviewUrl && (
-              <img src={fullPreviewUrl} alt="Full Bill Preview" className="max-h-[80vh] object-contain rounded" />
+              fullPreviewUrl.startsWith('data:application/pdf') || fullPreviewUrl.includes('.pdf') ? (
+                <iframe src={fullPreviewUrl} className="w-full h-[80vh] rounded-lg bg-white" title="PDF Bill Preview" />
+              ) : (
+                <img src={fullPreviewUrl} alt="Full Bill Preview" className="max-h-[80vh] object-contain rounded" />
+              )
             )}
           </div>
         </DialogContent>
