@@ -124,15 +124,20 @@ public class LoginActivity extends AppCompatActivity {
             });
     }
 
-    private void performDirectLogin(String name, String email) {
+    /**
+     * Creates a minimal local user profile from real sign-in data.
+     * Role and subscription are always fetched from the backend;
+     * this is only used as a temporary offline placeholder.
+     */
+    private void saveLocalUserAndProceed(String name, String email) {
         User user = new User();
-        user.setEmail(email != null ? email : "kavinkumar.m30@gmail.com");
-        user.setName(name != null ? name : "Studio Owner");
-        user.setRole("ADMIN");
-        user.setSubscriptionStatus("ACTIVE"); // Instant Pro access on mobile
+        user.setEmail(email != null ? email : "");
+        user.setName(name != null ? name : "User");
+        // Role is always determined by the backend — never hardcode ADMIN here
+        user.setRole("EMPLOYEE");
+        user.setSubscriptionStatus("TRIAL");
         user.setTrialInvoicesRemaining(3);
         sessionManager.saveUser(user);
-        sessionManager.saveToken("demo_token_authenticated");
 
         Toast.makeText(this, "Welcome " + user.getName() + "!", Toast.LENGTH_SHORT).show();
         startActivity(new Intent(LoginActivity.this, DashboardActivity.class));
