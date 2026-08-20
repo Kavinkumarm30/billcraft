@@ -72,6 +72,11 @@ export const requireAuth = async (
     }
   }
 
+  // Reject any other non-Firebase token prefixes (e.g. 'demo_token_xyz', 'mobile_token_*')
+  if (token.startsWith('demo_token') || token.startsWith('mobile_token')) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid token format' });
+  }
+
   let decodedToken: any = null;
   let uid: string = '';
   let email: string = '';
