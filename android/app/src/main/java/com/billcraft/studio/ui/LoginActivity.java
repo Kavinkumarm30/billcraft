@@ -144,22 +144,29 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 
-    private void syncUserWithBackend() {
+    private void syncUserWithBackend(String displayName, String email) {
         ApiClient.getService(this).getMe().enqueue(new Callback<User>() {
             @Override
             public void onResponse(Call<User> call, Response<User> response) {
                 if (response.isSuccessful() && response.body() != null) {
+                    // Use the authoritative user profile from backend (includes real role)
                     sessionManager.saveUser(response.body());
                     startActivity(new Intent(LoginActivity.this, DashboardActivity.class));
                     finish();
+                } else if (response.code() == 401 || response.code() == 403) {
+                    // Token rejected by server — clear session and show error
+                    sessionManager.clear();
+                    Toast.makeText(LoginActivity.this, "Access denied. Please contact the administrator.", Toast.LENGTH_LONG).show();
                 } else {
-                    performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com");
+                    // Non-auth error (e.g. 500) — save minimal local profile without admin role
+                    saveLocalUserAndProceed(displayName, email);
                 }
             }
 
             @Override
             public void onFailure(Call<User> call, Throwable t) {
-                performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com");
+                // Network failure — save minimal local profile without admin role
+                saveLocalUserAndProceed(displayName, email);
             }
         });
     }
