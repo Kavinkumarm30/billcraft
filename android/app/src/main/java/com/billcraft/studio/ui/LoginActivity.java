@@ -42,7 +42,6 @@ public class LoginActivity extends AppCompatActivity {
         setupGoogleSignIn();
 
         findViewById(R.id.btnGoogleSignIn).setOnClickListener(v -> signInWithGoogle());
-        findViewById(R.id.btnQuickAccess).setOnClickListener(v -> performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com"));
     }
 
     private void setupGoogleSignIn() {
