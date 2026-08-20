@@ -56,8 +56,9 @@ export const requireAuth = async (
 
   const token = authHeader.split('Bearer ')[1];
 
-  // Mobile App Dedicated & Demo Auth Bypass
-  if (token.startsWith('demo_token') || token.startsWith('mobile_token')) {
+  // Demo session bypass — ONLY for the exact known demo token used by the admin owner.
+  // ALL other tokens (including any 'mobile_token_*') must go through Firebase verification.
+  if (token === 'demo_token_authenticated') {
     const adminEmail = 'kavinkumar.m30@gmail.com';
     const adminUid = 'mobile_studio_super_admin_kavin';
     try {
@@ -66,7 +67,7 @@ export const requireAuth = async (
       req.dbUser = dbUser;
       return next();
     } catch (e: any) {
-      console.error('Mobile token authentication error:', e);
+      console.error('Demo token authentication error:', e);
       return res.status(500).json({ error: e.message });
     }
   }
