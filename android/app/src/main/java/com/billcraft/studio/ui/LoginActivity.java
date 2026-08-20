@@ -109,16 +109,17 @@ public class LoginActivity extends AppCompatActivity {
                             if (tokenTask.isSuccessful() && tokenTask.getResult() != null) {
                                 String jwt = tokenTask.getResult().getToken();
                                 sessionManager.saveToken(jwt);
-                                syncUserWithBackend();
+                                syncUserWithBackend(user.getDisplayName(), user.getEmail());
                             } else {
-                                performDirectLogin(user.getDisplayName() != null ? user.getDisplayName() : "Studio Owner", user.getEmail());
+                                Toast.makeText(LoginActivity.this, "Failed to get auth token. Please try again.", Toast.LENGTH_LONG).show();
                             }
                         });
                     } else {
-                        performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com");
+                        Toast.makeText(this, "Sign-in failed. Please try again.", Toast.LENGTH_LONG).show();
                     }
                 } else {
-                    performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com");
+                    String errorMsg = task.getException() != null ? task.getException().getMessage() : "Unknown error";
+                    Toast.makeText(this, "Authentication failed: " + errorMsg, Toast.LENGTH_LONG).show();
                 }
             });
     }
