@@ -84,17 +84,16 @@ public class LoginActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 if (account != null && account.getIdToken() != null) {
                     firebaseAuthWithGoogle(account.getIdToken());
-                } else if (account != null) {
-                    performDirectLogin(
-                            account.getDisplayName() != null ? account.getDisplayName() : "Studio Owner",
-                            account.getEmail() != null ? account.getEmail() : "kavinkumar.m30@gmail.com"
-                    );
+                } else if (account != null && account.getEmail() != null) {
+                    // Got account info but no ID token — show error, do not elevate privilege
+                    Toast.makeText(this, "Sign-in incomplete. Please try again.", Toast.LENGTH_LONG).show();
                 } else {
-                    performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com");
+                    Toast.makeText(this, "Sign-in failed. Please try again.", Toast.LENGTH_LONG).show();
                 }
+            } catch (ApiException e) {
+                Toast.makeText(this, "Google Sign-In failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
             } catch (Exception e) {
-                // Seamlessly sign in as Studio Owner without blocking with error popups
-                performDirectLogin("Studio Owner", "kavinkumar.m30@gmail.com");
+                Toast.makeText(this, "Sign-in error. Please try again.", Toast.LENGTH_LONG).show();
             }
         }
     }
